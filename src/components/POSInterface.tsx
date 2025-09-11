@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
+import BarcodeScanner from '@/components/BarcodeScanner'
+import ReceiptModal from '@/components/ReceiptModal'
 import { 
   ShoppingCart, 
   Search, 
@@ -38,6 +40,9 @@ export default function POSInterface() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
+  const [showReceipt, setShowReceipt] = useState(false)
+  const [receiptData, setReceiptData] = useState<any>(null)
 
   useEffect(() => {
     fetchProducts()
@@ -100,6 +105,16 @@ export default function POSInterface() {
     return cart.reduce((total, item) => total + (item.product.price * item.quantity), 0)
   }
 
+  const handleBarcodeScanned = (barcode: string) => {
+    const product = products.find(p => p.barcode === barcode)
+    if (product) {
+      addToCart(product)
+      setShowBarcodeScanner(false)
+    } else {
+      alert(`No product found with barcode: ${barcode}`)
+    }
+  }
+
   const handleCheckout = async () => {
     if (cart.length === 0) return
 
@@ -118,9 +133,28 @@ export default function POSInterface() {
       })
 
       if (response.ok) {
+        const transaction = await response.json()
+        
+        // Create receipt data
+        const receipt = {
+          receiptNumber: transaction.receiptNumber,
+          items: cart.map(item => ({
+            name: item.product.name,
+            quantity: item.quantity,
+            price: item.product.price,
+            total: item.product.price * item.quantity,
+          })),
+          subtotal: calculateTotal(),
+          tax: 0,
+          total: calculateTotal(),
+          paymentMethod: 'CASH',
+          cashier: user?.name || 'Unknown',
+          timestamp: new Date().toLocaleString(),
+        }
+        
+        setReceiptData(receipt)
+        setShowReceipt(true)
         clearCart()
-        // TODO: Show receipt
-        alert('Transaction completed successfully!')
       }
     } catch (error) {
       console.error('Checkout failed:', error)
@@ -167,7 +201,7 @@ export default function POSInterface() {
                   className="pl-10"
                 />
               </div>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => setShowBarcodeScanner(true)}>
                 <ScanLine className="w-4 h-4 mr-2" />
                 Scan
               </Button>
@@ -302,6 +336,20 @@ export default function POSInterface() {
           )}
         </div>
       </div>
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScanner
+        isOpen={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onScan={handleBarcodeScanned}
+      />
+
+      {/* Receipt Modal */}
+      <ReceiptModal
+        isOpen={showReceipt}
+        onClose={() => setShowReceipt(false)}
+        receiptData={receiptData}
+      />
     </div>
   )
 }
