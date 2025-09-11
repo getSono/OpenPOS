@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const receiptNumber = `RCP-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
     // Calculate subtotal
-    const subtotal = items.reduce((sum: number, item: any) => 
+    const subtotal = items.reduce((sum: number, item: { unitPrice: number; quantity: number }) => 
       sum + (item.unitPrice * item.quantity), 0
     )
 
@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
     `, [transactionId])
 
     const result = {
-      ...transaction,
-      items: transactionItems.map(item => ({
+      ...(transaction as Record<string, unknown>),
+      items: (transactionItems as Array<Record<string, unknown> & { productName: string; productPrice: number }>).map(item => ({
         ...item,
         product: {
           name: item.productName,
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const transactions = await db.all(`
       SELECT t.*, u.name as userName 
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     // Get transaction items for each transaction
     const transactionsWithItems = await Promise.all(
-      transactions.map(async (transaction) => {
+      (transactions as Array<Record<string, unknown> & { id: string; userName: string }>).map(async (transaction) => {
         const items = await db.all(`
           SELECT ti.*, p.name as productName
           FROM transaction_items ti
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         return {
           ...transaction,
           user: { name: transaction.userName },
-          items: items.map(item => ({
+          items: (items as Array<Record<string, unknown> & { productName: string }>).map(item => ({
             ...item,
             product: { name: item.productName }
           }))

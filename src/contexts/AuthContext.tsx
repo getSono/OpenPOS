@@ -11,6 +11,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   login: (pin: string) => Promise<boolean>
+  loginWithNFC: (nfcCode: string) => Promise<boolean>
   logout: () => void
   isLoading: boolean
 }
@@ -50,13 +51,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false
   }
 
+  const loginWithNFC = async (nfcCode: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/auth/login-nfc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nfcCode }),
+      })
+
+      if (response.ok) {
+        const userData = await response.json()
+        setUser(userData)
+        localStorage.setItem('openpos_user', JSON.stringify(userData))
+        return true
+      }
+    } catch (error) {
+      console.error('NFC Login error:', error)
+    }
+    return false
+  }
+
   const logout = () => {
     setUser(null)
     localStorage.removeItem('openpos_user')
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, loginWithNFC, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   )

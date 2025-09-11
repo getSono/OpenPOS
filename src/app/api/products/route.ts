@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/prisma'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const products = await db.all(`
       SELECT p.*, c.name as categoryName 
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     `)
 
     // Transform the data to match our interface
-    const formattedProducts = products.map(product => ({
+    const formattedProducts = (products as Array<Record<string, unknown> & { categoryName: string }>).map(product => ({
       ...product,
       category: { name: product.categoryName }
     }))
@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
     `, [result.lastID])
 
     const formattedProduct = {
-      ...product,
-      category: { name: product.categoryName }
+      ...(product as Record<string, unknown> & { categoryName: string }),
+      category: { name: (product as { categoryName: string }).categoryName }
     }
 
     return NextResponse.json(formattedProduct, { status: 201 })

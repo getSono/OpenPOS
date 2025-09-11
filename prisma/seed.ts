@@ -34,6 +34,7 @@ async function main() {
       data: {
         name: 'Admin User',
         pin: '1234',
+        nfcCode: 'NFC001',
         role: 'ADMIN'
       }
     }),
@@ -41,6 +42,7 @@ async function main() {
       data: {
         name: 'Manager User',
         pin: '5678',
+        nfcCode: 'NFC002',
         role: 'MANAGER'
       }
     }),
@@ -48,6 +50,7 @@ async function main() {
       data: {
         name: 'Cashier User',
         pin: '9999',
+        nfcCode: 'NFC003',
         role: 'CASHIER'
       }
     })
@@ -140,9 +143,9 @@ async function main() {
   console.log(`- ${users.length} users`)
   console.log(`- ${products.length} products`)
   console.log('\nTest users:')
-  console.log('Admin: PIN 1234')
-  console.log('Manager: PIN 5678')
-  console.log('Cashier: PIN 9999')
+  console.log('Admin: PIN 1234 | NFC NFC001')
+  console.log('Manager: PIN 5678 | NFC NFC002')
+  console.log('Cashier: PIN 9999 | NFC NFC003')
 }
 
 main()

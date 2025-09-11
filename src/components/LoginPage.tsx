@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
-import { CreditCard, Lock } from 'lucide-react'
+import NFCReader from '@/components/NFCReader'
+import { CreditCard, Lock, Zap } from 'lucide-react'
 
 export default function LoginPage() {
   const [pin, setPin] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const { login } = useAuth()
+  const [showNFCReader, setShowNFCReader] = useState(false)
+  const { login, loginWithNFC } = useAuth()
 
   const handlePinChange = (value: string) => {
     if (value.length <= 6 && /^\d*$/.test(value)) {
@@ -53,6 +55,18 @@ export default function LoginPage() {
   const handleBackspace = () => {
     setPin(pin.slice(0, -1))
     setError('')
+  }
+
+  const handleNFCRead = async (nfcCode: string) => {
+    setIsLoading(true)
+    setError('')
+
+    const success = await loginWithNFC(nfcCode)
+    if (!success) {
+      setError('Invalid NFC code. Please try again.')
+    }
+
+    setIsLoading(false)
   }
 
   return (
@@ -98,6 +112,22 @@ export default function LoginPage() {
               </Button>
             </form>
 
+            <div className="flex items-center">
+              <div className="flex-1 h-px bg-gray-300"></div>
+              <span className="px-3 text-sm text-gray-500">OR</span>
+              <div className="flex-1 h-px bg-gray-300"></div>
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setShowNFCReader(true)}
+              disabled={isLoading}
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              Use NFC Card
+            </Button>
+
             {/* Number Pad */}
             <div className="grid grid-cols-3 gap-3">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
@@ -137,10 +167,17 @@ export default function LoginPage() {
           <CardFooter className="flex justify-center">
             <div className="flex items-center space-x-2 text-sm text-gray-500">
               <CreditCard className="w-4 h-4" />
-              <span>NFC support coming soon</span>
+              <span>NFC authentication available</span>
             </div>
           </CardFooter>
         </Card>
+
+        {/* NFC Reader Modal */}
+        <NFCReader
+          isOpen={showNFCReader}
+          onClose={() => setShowNFCReader(false)}
+          onNFCRead={handleNFCRead}
+        />
       </div>
     </div>
   )

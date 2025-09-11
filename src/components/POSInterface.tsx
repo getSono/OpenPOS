@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
 import BarcodeScanner from '@/components/BarcodeScanner'
+import HandheldScanner from '@/components/HandheldScanner'
 import ReceiptModal from '@/components/ReceiptModal'
 import { 
   ShoppingCart, 
@@ -17,7 +18,8 @@ import {
   Minus,
   Trash2,
   CreditCard,
-  Receipt
+  Monitor,
+  Smartphone
 } from 'lucide-react'
 
 interface Product {
@@ -41,8 +43,23 @@ export default function POSInterface() {
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
+  const [showHandheldScanner, setShowHandheldScanner] = useState(false)
   const [showReceipt, setShowReceipt] = useState(false)
-  const [receiptData, setReceiptData] = useState<any>(null)
+  const [receiptData, setReceiptData] = useState<{
+    receiptNumber: string;
+    items: Array<{
+      name: string;
+      quantity: number;
+      price: number;
+      total: number;
+    }>;
+    subtotal: number;
+    tax: number;
+    total: number;
+    paymentMethod: string;
+    cashier: string;
+    timestamp: string;
+  } | null>(null)
 
   useEffect(() => {
     fetchProducts()
@@ -70,14 +87,20 @@ export default function POSInterface() {
   const addToCart = (product: Product) => {
     setCart(prev => {
       const existingItem = prev.find(item => item.product.id === product.id)
+      let newCart
       if (existingItem) {
-        return prev.map(item =>
+        newCart = prev.map(item =>
           item.product.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         )
+      } else {
+        newCart = [...prev, { product, quantity: 1 }]
       }
-      return [...prev, { product, quantity: 1 }]
+      
+      // Update customer display
+      updateCustomerDisplay(newCart, product)
+      return newCart
     })
   }
 
@@ -86,23 +109,56 @@ export default function POSInterface() {
       removeFromCart(productId)
       return
     }
-    setCart(prev =>
-      prev.map(item =>
+    setCart(prev => {
+      const newCart = prev.map(item =>
         item.product.id === productId ? { ...item, quantity } : item
       )
-    )
+      updateCustomerDisplay(newCart)
+      return newCart
+    })
   }
 
   const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.product.id !== productId))
+    setCart(prev => {
+      const newCart = prev.filter(item => item.product.id !== productId)
+      updateCustomerDisplay(newCart)
+      return newCart
+    })
   }
 
   const clearCart = () => {
     setCart([])
+    updateCustomerDisplay([])
   }
 
   const calculateTotal = () => {
     return cart.reduce((total, item) => total + (item.product.price * item.quantity), 0)
+  }
+
+  // Update customer display with current cart data
+  const updateCustomerDisplay = async (cartData: CartItem[], currentItem?: Product) => {
+    try {
+      const total = cartData.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
+      const itemCount = cartData.reduce((sum, item) => sum + item.quantity, 0)
+      
+      const displayData = {
+        cart: cartData,
+        total,
+        itemCount,
+        currentItem: currentItem ? {
+          name: currentItem.name,
+          price: currentItem.price
+        } : undefined
+      }
+
+      await fetch('/api/customer-display', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(displayData)
+      })
+    } catch (error) {
+      console.error('Failed to update customer display:', error)
+    }
   }
 
   const handleBarcodeScanned = (barcode: string) => {
@@ -110,9 +166,22 @@ export default function POSInterface() {
     if (product) {
       addToCart(product)
       setShowBarcodeScanner(false)
+      setShowHandheldScanner(false)
     } else {
       alert(`No product found with barcode: ${barcode}`)
     }
+  }
+
+  const handleNFCScanned = (nfcCode: string) => {
+    // Handle NFC customer identification or payment
+    console.log('NFC scanned:', nfcCode)
+    // For now, just close the scanner
+    setShowHandheldScanner(false)
+    // TODO: Implement customer lookup or payment processing
+  }
+
+  const openCustomerDisplay = () => {
+    window.open('/customer-display', '_blank', 'width=1200,height=800')
   }
 
   const handleCheckout = async () => {
@@ -172,6 +241,10 @@ export default function POSInterface() {
             <p className="text-sm text-gray-600">Point of Sale System</p>
           </div>
           <div className="flex items-center space-x-4">
+            <Button variant="outline" size="sm" onClick={openCustomerDisplay}>
+              <Monitor className="w-4 h-4 mr-2" />
+              Customer Display
+            </Button>
             <div className="flex items-center space-x-2">
               <User className="w-5 h-5 text-gray-600" />
               <span className="text-sm font-medium">{user?.name}</span>
@@ -204,6 +277,10 @@ export default function POSInterface() {
               <Button variant="outline" onClick={() => setShowBarcodeScanner(true)}>
                 <ScanLine className="w-4 h-4 mr-2" />
                 Scan
+              </Button>
+              <Button variant="outline" onClick={() => setShowHandheldScanner(true)}>
+                <Smartphone className="w-4 h-4 mr-2" />
+                Handheld
               </Button>
             </div>
           </div>
@@ -344,11 +421,19 @@ export default function POSInterface() {
         onScan={handleBarcodeScanned}
       />
 
+      {/* Handheld Scanner Modal */}
+      <HandheldScanner
+        isOpen={showHandheldScanner}
+        onClose={() => setShowHandheldScanner(false)}
+        onBarcodeScan={handleBarcodeScanned}
+        onNFCScan={handleNFCScanned}
+      />
+
       {/* Receipt Modal */}
       <ReceiptModal
         isOpen={showReceipt}
         onClose={() => setShowReceipt(false)}
-        receiptData={receiptData}
+        receiptData={receiptData || undefined}
       />
     </div>
   )
