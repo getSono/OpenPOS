@@ -70,24 +70,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900 dark:to-violet-900 flex items-center justify-center p-4 animate-in">
+    <div className="min-h-screen gradient-background flex items-center justify-center p-4 animate-in">
       <div className="w-full max-w-md space-y-8">
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+          <div className="mx-auto w-20 h-20 gradient-primary rounded-2xl flex items-center justify-center mb-6 shadow-lg">
             <Lock className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold gradient-primary bg-clip-text text-transparent">
             OpenPOS
           </h1>
-          <p className="text-lg text-muted-foreground">Point of Sale System</p>
+          <p className="text-lg text-gray-600">Point of Sale System</p>
         </div>
 
         {/* Login Card */}
-        <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-lg dark:bg-gray-900/80">
+        <Card className="shadow-2xl border-0 glass">
           <CardHeader className="text-center space-y-4">
-            <CardTitle className="text-2xl">Welcome Back</CardTitle>
-            <p className="text-muted-foreground">Please enter your 4-6 digit PIN to continue</p>
+            <CardTitle className="text-2xl text-gray-900">Welcome Back</CardTitle>
+            <p className="text-gray-600">Please enter your 4-6 digit PIN to continue</p>
           </CardHeader>
 
           <CardContent className="space-y-6">
@@ -98,14 +98,14 @@ export default function LoginPage() {
                   value={pin}
                   onChange={(e) => handlePinChange(e.target.value)}
                   placeholder="Enter PIN"
-                  className="text-center text-2xl tracking-widest h-12 rounded-xl bg-secondary/50"
+                  className="text-center text-2xl tracking-widest h-12 rounded-xl bg-gray-50 border-gray-200 focus:border-purple-500 focus:ring-purple-500"
                   maxLength={6}
                 />
               </div>
 
               {error && (
-                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 animate-in">
-                  <p className="text-sm text-destructive text-center flex items-center justify-center gap-2">
+                <div className="p-3 rounded-lg status-error animate-in">
+                  <p className="text-sm text-red-600 text-center flex items-center justify-center gap-2">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
@@ -117,7 +117,7 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 size="lg"
-                className="w-full rounded-xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-lg hover:shadow-xl transition-all duration-200"
+                className="w-full rounded-xl gradient-primary text-white shadow-lg hover:shadow-xl transition-all duration-200 border-0"
                 disabled={pin.length < 4 || isLoading}
               >
                 {isLoading ? (
@@ -134,10 +134,10 @@ export default function LoginPage() {
             {/* Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
+                <span className="w-full border-t border-gray-200" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-3 text-muted-foreground">Or continue with</span>
+                <span className="bg-white px-3 text-gray-500">Or continue with</span>
               </div>
             </div>
 
@@ -145,7 +145,7 @@ export default function LoginPage() {
             <Button
               variant="outline"
               size="lg"
-              className="w-full rounded-xl border-2 hover:bg-accent/50 transition-all duration-200"
+              className="w-full rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-all duration-200"
               onClick={() => setShowNFCReader(true)}
               disabled={isLoading}
             >
@@ -155,14 +155,14 @@ export default function LoginPage() {
 
             {/* Number Pad */}
             <div className="space-y-3">
-              <h3 className="text-sm font-medium text-center text-muted-foreground">Quick Entry</h3>
+              <h3 className="text-sm font-medium text-center text-gray-500">Quick Entry</h3>
               <div className="grid grid-cols-3 gap-3">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                   <Button
                     key={num}
                     variant="outline"
                     size="lg"
-                    className="h-14 text-lg font-semibold rounded-xl hover:bg-accent hover:scale-105 transition-all duration-200 touch-friendly"
+                    className="h-14 text-lg font-semibold rounded-xl border-gray-200 hover:bg-gray-50 hover:scale-105 transition-all duration-200 touch-friendly"
                     onClick={() => handleNumberClick(num.toString())}
                   >
                     {num}
@@ -171,7 +171,7 @@ export default function LoginPage() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="h-14 rounded-xl hover:bg-accent hover:scale-105 transition-all duration-200 touch-friendly"
+                  className="h-14 rounded-xl border-gray-200 hover:bg-gray-50 hover:scale-105 transition-all duration-200 touch-friendly"
                   onClick={handleClear}
                 >
                   Clear
@@ -179,7 +179,7 @@ export default function LoginPage() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="h-14 text-lg font-semibold rounded-xl hover:bg-accent hover:scale-105 transition-all duration-200 touch-friendly"
+                  className="h-14 text-lg font-semibold rounded-xl border-gray-200 hover:bg-gray-50 hover:scale-105 transition-all duration-200 touch-friendly"
                   onClick={() => handleNumberClick('0')}
                 >
                   0
@@ -187,7 +187,7 @@ export default function LoginPage() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="h-14 rounded-xl hover:bg-accent hover:scale-105 transition-all duration-200 touch-friendly"
+                  className="h-14 rounded-xl border-gray-200 hover:bg-gray-50 hover:scale-105 transition-all duration-200 touch-friendly"
                   onClick={handleBackspace}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,7 +199,7 @@ export default function LoginPage() {
 
             {/* NFC Info */}
             <div className="text-center">
-              <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm">
+              <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-blue-50 text-blue-700 text-sm">
                 <CreditCard className="w-4 h-4" />
                 <span>NFC authentication available</span>
               </div>
@@ -208,7 +208,7 @@ export default function LoginPage() {
         </Card>
 
         {/* Footer */}
-        <div className="text-center text-sm text-muted-foreground">
+        <div className="text-center text-sm text-gray-500">
           <p>Secure Point of Sale System</p>
         </div>
       </div>

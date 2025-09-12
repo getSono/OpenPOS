@@ -5,21 +5,21 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 touch-friendly",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 touch-friendly",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md",
+        default: "bg-purple-600 text-white hover:bg-purple-700 shadow-sm hover:shadow-md",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm hover:shadow-md",
+          "bg-red-600 text-white hover:bg-red-700 shadow-sm hover:shadow-md",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md",
+          "border border-gray-200 bg-white hover:bg-gray-50 hover:text-gray-900 shadow-sm hover:shadow-md",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm hover:shadow-md",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-success text-success-foreground hover:bg-success/90 shadow-sm hover:shadow-md",
-        warning: "bg-warning text-warning-foreground hover:bg-warning/90 shadow-sm hover:shadow-md",
+          "bg-gray-100 text-gray-900 hover:bg-gray-200 shadow-sm hover:shadow-md",
+        ghost: "hover:bg-gray-100 hover:text-gray-900",
+        link: "text-purple-600 underline-offset-4 hover:underline",
+        success: "bg-green-600 text-white hover:bg-green-700 shadow-sm hover:shadow-md",
+        warning: "bg-amber-500 text-white hover:bg-amber-600 shadow-sm hover:shadow-md",
       },
       size: {
         default: "h-10 px-4 py-2",
