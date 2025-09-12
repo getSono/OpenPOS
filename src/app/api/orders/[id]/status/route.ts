@@ -3,11 +3,11 @@ import { db } from '@/lib/prisma'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { status, workerId } = await request.json()
-    const orderId = params.id
+    const { id: orderId } = await params
 
     if (!status) {
       return NextResponse.json(

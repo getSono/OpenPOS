@@ -24,12 +24,13 @@ export async function POST(request: NextRequest) {
     const userData = {
       id: user.id,
       name: user.name,
-      role: user.role
+      role: user.role,
+      nfcCode: nfcCode.trim()
     }
 
     return NextResponse.json(userData)
   } catch (error) {
-    console.error('NFC login error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('NFC authentication error:', error)
+    return NextResponse.json({ error: 'Authentication failed' }, { status: 500 })
   }
 }
