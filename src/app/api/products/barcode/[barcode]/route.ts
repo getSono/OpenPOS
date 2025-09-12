@@ -16,18 +16,25 @@ export async function GET(
     }
 
     // Find product by barcode
-    const product = await db.get(`
-      SELECT p.*, c.name as categoryName 
-      FROM products p
-      JOIN categories c ON p.categoryId = c.id
-      WHERE p.barcode = ? AND p.isActive = 1
-    `, [barcode])
+    type ProductRow = {
+      id: number;
+      name: string;
+      description: string;
+      price: number;
+      barcode: string;
+      stock: number;
+      categoryName: string;
+    } | undefined;
+    const product = await db.get(
+      `SELECT p.*, c.name as categoryName FROM products p JOIN categories c ON p.categoryId = c.id WHERE p.barcode = ? AND p.isActive = 1`,
+      [barcode]
+    ) as ProductRow;
 
-    if (!product) {
+    if (!product || !product.id || !product.name || !product.price || !product.barcode || !product.categoryName) {
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
-      )
+      );
     }
 
     // Format the response
@@ -41,9 +48,9 @@ export async function GET(
       category: {
         name: product.categoryName
       }
-    }
+    };
 
-    return NextResponse.json(result)
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Failed to find product by barcode:', error)
     return NextResponse.json(

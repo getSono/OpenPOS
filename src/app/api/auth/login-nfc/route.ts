@@ -10,14 +10,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by NFC code
-    const user = await db.get(`
-      SELECT id, name, role 
-      FROM users 
-      WHERE nfcCode = ? AND isActive = 1
-    `, [nfcCode.trim()])
+    type UserRow = { id: number; name: string; role: string } | undefined;
+    const user = await db.get(
+      `SELECT id, name, role FROM users WHERE nfcCode = ? AND isActive = 1`,
+      [nfcCode.trim()]
+    ) as UserRow;
 
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid NFC code' }, { status: 401 })
+    if (!user || !user.id || !user.name || !user.role) {
+      return NextResponse.json({ error: 'Invalid NFC code' }, { status: 401 });
     }
 
     // Return user data (excluding sensitive information)
@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
       id: user.id,
       name: user.name,
       role: user.role
-    }
+    };
 
-    return NextResponse.json(userData)
+    return NextResponse.json(userData);
   } catch (error) {
     console.error('NFC login error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
