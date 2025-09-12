@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { broadcastUpdate } from './stream/route'
+import { broadcastUpdate } from '@/lib/customer-display'
 
 export async function POST(request: NextRequest) {
   try {
