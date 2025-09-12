@@ -20,12 +20,18 @@ interface ReceiptProps {
     items: ReceiptItem[]
     subtotal: number
     tax: number
+    discount: number
     total: number
     paymentMethod: string
     cashier: string
     timestamp: string
     amountPaid?: number
     changeAmount?: number
+    discountCode?: {
+      code: string
+      name: string
+      discountAmount: number
+    }
   }
 }
 
@@ -78,7 +84,8 @@ ${receiptData.items.map(item =>
 
 ===============
 Subtotal: $${receiptData.subtotal.toFixed(2)}
-Tax: $${receiptData.tax.toFixed(2)}
+Tax: $${receiptData.tax.toFixed(2)}${receiptData.discountCode ? `
+Discount (${receiptData.discountCode.name}): -$${receiptData.discount.toFixed(2)}` : ''}
 TOTAL: $${receiptData.total.toFixed(2)}
 
 Payment: ${receiptData.paymentMethod}
@@ -167,6 +174,12 @@ Your order number is: ${receiptData.orderNumber}
                 <span>Tax:</span>
                 <span>${receiptData.tax.toFixed(2)}</span>
               </div>
+              {receiptData.discountCode && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount ({receiptData.discountCode.name}):</span>
+                  <span>-${receiptData.discount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="total-row flex justify-between font-bold text-base">
                 <span>TOTAL:</span>
                 <span>${receiptData.total.toFixed(2)}</span>

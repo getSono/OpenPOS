@@ -70,18 +70,22 @@ CREATE TABLE IF NOT EXISTS transactions (
     tax REAL DEFAULT 0,
     discount REAL DEFAULT 0,
     total REAL NOT NULL,
-    paymentMethod TEXT DEFAULT 'CASH' CHECK (paymentMethod IN ('CASH', 'CARD', 'DIGITAL', 'CHECK')),
+    amountPaid REAL,
+    changeAmount REAL DEFAULT 0,
+    paymentMethod TEXT DEFAULT 'CASH' CHECK (paymentMethod IN ('CASH', 'CARD', 'DIGITAL', 'CHECK', 'PAYPAL')),
     status TEXT DEFAULT 'COMPLETED' CHECK (status IN ('PENDING', 'COMPLETED', 'CANCELLED', 'REFUNDED')),
     orderStatus TEXT DEFAULT 'PENDING' CHECK (orderStatus IN ('PENDING', 'IN_PROGRESS', 'READY', 'COMPLETED', 'CANCELLED')),
     notes TEXT,
     userId TEXT NOT NULL,
     customerId TEXT,
     workerId TEXT,
+    discountCodeId TEXT,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (userId) REFERENCES users (id),
     FOREIGN KEY (customerId) REFERENCES customers (id),
-    FOREIGN KEY (workerId) REFERENCES workers (id)
+    FOREIGN KEY (workerId) REFERENCES workers (id),
+    FOREIGN KEY (discountCodeId) REFERENCES discount_codes (id)
 );
 
 -- Workers table
@@ -106,6 +110,24 @@ CREATE TABLE IF NOT EXISTS transaction_items (
     productId TEXT NOT NULL,
     FOREIGN KEY (transactionId) REFERENCES transactions (id) ON DELETE CASCADE,
     FOREIGN KEY (productId) REFERENCES products (id)
+);
+
+-- Discount Codes table
+CREATE TABLE IF NOT EXISTS discount_codes (
+    id TEXT PRIMARY KEY DEFAULT (hex(randomblob(16))),
+    code TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    type TEXT NOT NULL DEFAULT 'PERCENTAGE' CHECK (type IN ('PERCENTAGE', 'FIXED_AMOUNT')),
+    value REAL NOT NULL,
+    minAmount REAL DEFAULT 0,
+    maxUses INTEGER,
+    currentUses INTEGER DEFAULT 0,
+    isActive INTEGER DEFAULT 1,
+    validFrom DATETIME DEFAULT CURRENT_TIMESTAMP,
+    validUntil DATETIME,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 `;
 
@@ -137,6 +159,13 @@ INSERT OR IGNORE INTO products (id, name, description, price, cost, sku, barcode
     ('prod4', 'USB Cable', 'USB-C to USB-A cable 1m', 12.99, 6.50, 'USB-C-1M', '1234567890126', 25, 5, 'cat3'),
     ('prod5', 'Smartphone Case', 'Universal smartphone protective case', 19.99, 8.00, 'CASE-UNI', '1234567890127', 30, 3, 'cat3'),
     ('prod6', 'Energy Bar', 'Chocolate energy bar 60g', 3.50, 1.75, 'ENERGY-60', '1234567890128', 40, 8, 'cat2');
+
+-- Insert sample discount codes
+INSERT OR IGNORE INTO discount_codes (id, code, name, description, type, value, minAmount, maxUses) VALUES 
+    ('disc1', 'SAVE10', '10% Off', 'Get 10% off your purchase', 'PERCENTAGE', 10, 5.00, NULL),
+    ('disc2', 'WELCOME5', 'Welcome $5 Off', 'New customer discount', 'FIXED_AMOUNT', 5.00, 10.00, 100),
+    ('disc3', 'BULK20', '20% Bulk Discount', 'Save 20% on orders over $25', 'PERCENTAGE', 20, 25.00, NULL),
+    ('disc4', 'STUDENT15', 'Student Discount', '15% off for students', 'PERCENTAGE', 15, 0, NULL);
 `;
 
 console.log('Creating database and tables...');

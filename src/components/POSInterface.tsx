@@ -67,12 +67,18 @@ export default function POSInterface() {
     }>;
     subtotal: number;
     tax: number;
+    discount: number;
     total: number;
     paymentMethod: string;
     cashier: string;
     timestamp: string;
     amountPaid?: number;
     changeAmount?: number;
+    discountCode?: {
+      code: string;
+      name: string;
+      discountAmount: number;
+    };
   } | null>(null)
 
   useEffect(() => {
@@ -202,6 +208,12 @@ export default function POSInterface() {
     paymentMethod: 'CASH'
     amountPaid?: number
     changeAmount?: number
+    discountCode?: {
+      id: string
+      code: string
+      name: string
+      discountAmount: number
+    }
   }) => {
     if (cart.length === 0) return
 
@@ -219,6 +231,7 @@ export default function POSInterface() {
           paymentMethod: paymentData.paymentMethod,
           amountPaid: paymentData.amountPaid,
           changeAmount: paymentData.changeAmount,
+          discountCode: paymentData.discountCode,
         }),
       })
 
@@ -226,6 +239,10 @@ export default function POSInterface() {
         const transaction = await response.json()
         
         // Create receipt data
+        const originalTotal = calculateTotal()
+        const discountAmount = paymentData.discountCode?.discountAmount || 0
+        const finalTotal = originalTotal - discountAmount
+        
         const receipt = {
           receiptNumber: transaction.receiptNumber,
           orderNumber: transaction.orderNumber,
@@ -235,14 +252,20 @@ export default function POSInterface() {
             price: item.product.price,
             total: item.product.price * item.quantity,
           })),
-          subtotal: calculateTotal(),
+          subtotal: originalTotal,
           tax: 0,
-          total: calculateTotal(),
+          discount: discountAmount,
+          total: finalTotal,
           paymentMethod: paymentData.paymentMethod,
           cashier: user?.name || 'Unknown',
           timestamp: new Date().toLocaleString(),
           amountPaid: paymentData.amountPaid,
           changeAmount: paymentData.changeAmount,
+          discountCode: paymentData.discountCode ? {
+            code: paymentData.discountCode.code,
+            name: paymentData.discountCode.name,
+            discountAmount: paymentData.discountCode.discountAmount
+          } : undefined,
         }
         
         setReceiptData(receipt)
