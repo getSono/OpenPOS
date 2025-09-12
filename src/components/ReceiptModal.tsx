@@ -16,6 +16,7 @@ interface ReceiptProps {
   onClose: () => void
   receiptData?: {
     receiptNumber: string
+    orderNumber: number
     items: ReceiptItem[]
     subtotal: number
     tax: number
@@ -64,6 +65,7 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }: ReceiptPr
 OPENPOS RECEIPT
 ===============
 Receipt #: ${receiptData.receiptNumber}
+Order #: ${receiptData.orderNumber}
 Date: ${receiptData.timestamp}
 Cashier: ${receiptData.cashier}
 
@@ -80,6 +82,7 @@ TOTAL: $${receiptData.total.toFixed(2)}
 Payment: ${receiptData.paymentMethod}
 
 Thank you for shopping with us!
+Your order number is: ${receiptData.orderNumber}
     `.trim()
 
     const blob = new Blob([receiptText], { type: 'text/plain' })
@@ -115,6 +118,10 @@ Thank you for shopping with us!
               <div className="flex justify-between">
                 <span>Receipt #:</span>
                 <span>{receiptData.receiptNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Order #:</span>
+                <span className="font-bold text-lg">{receiptData.orderNumber}</span>
               </div>
               <div className="flex justify-between">
                 <span>Date:</span>

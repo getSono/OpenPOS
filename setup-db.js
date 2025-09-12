@@ -65,19 +65,35 @@ CREATE TABLE IF NOT EXISTS customers (
 CREATE TABLE IF NOT EXISTS transactions (
     id TEXT PRIMARY KEY DEFAULT (hex(randomblob(16))),
     receiptNumber TEXT UNIQUE NOT NULL,
+    orderNumber INTEGER UNIQUE NOT NULL,
     subtotal REAL NOT NULL,
     tax REAL DEFAULT 0,
     discount REAL DEFAULT 0,
     total REAL NOT NULL,
     paymentMethod TEXT DEFAULT 'CASH' CHECK (paymentMethod IN ('CASH', 'CARD', 'DIGITAL', 'CHECK')),
     status TEXT DEFAULT 'COMPLETED' CHECK (status IN ('PENDING', 'COMPLETED', 'CANCELLED', 'REFUNDED')),
+    orderStatus TEXT DEFAULT 'PENDING' CHECK (orderStatus IN ('PENDING', 'IN_PROGRESS', 'READY', 'COMPLETED', 'CANCELLED')),
     notes TEXT,
     userId TEXT NOT NULL,
     customerId TEXT,
+    workerId TEXT,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (userId) REFERENCES users (id),
-    FOREIGN KEY (customerId) REFERENCES customers (id)
+    FOREIGN KEY (customerId) REFERENCES customers (id),
+    FOREIGN KEY (workerId) REFERENCES workers (id)
+);
+
+-- Workers table
+CREATE TABLE IF NOT EXISTS workers (
+    id TEXT PRIMARY KEY DEFAULT (hex(randomblob(16))),
+    name TEXT NOT NULL,
+    pin TEXT NOT NULL,
+    nfcCode TEXT UNIQUE,
+    isActive INTEGER NOT NULL DEFAULT 1,
+    currentStation TEXT,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Transaction Items table
@@ -102,10 +118,16 @@ INSERT OR IGNORE INTO categories (id, name, description, color) VALUES
     ('cat3', 'Electronics', 'Electronic devices and accessories', '#8B5CF6');
 
 -- Insert users
-INSERT OR IGNORE INTO users (id, name, pin, role) VALUES 
-    ('user1', 'Admin User', '1234', 'ADMIN'),
-    ('user2', 'Manager User', '5678', 'MANAGER'),
-    ('user3', 'Cashier User', '9999', 'CASHIER');
+INSERT OR IGNORE INTO users (id, name, pin, nfcCode, role) VALUES 
+    ('user1', 'Admin User', '1234', 'NFC001', 'ADMIN'),
+    ('user2', 'Manager User', '5678', 'NFC002', 'MANAGER'),
+    ('user3', 'Cashier User', '9999', 'NFC003', 'CASHIER');
+
+-- Insert workers
+INSERT OR IGNORE INTO workers (id, name, pin, nfcCode, currentStation) VALUES 
+    ('worker1', 'Kitchen Worker 1', '0000', 'WORKER001', 'Kitchen'),
+    ('worker2', 'Kitchen Worker 2', '0000', 'WORKER002', 'Grill'),
+    ('worker3', 'Prep Worker', '0000', 'WORKER003', 'Prep');
 
 -- Insert products
 INSERT OR IGNORE INTO products (id, name, description, price, cost, sku, barcode, stock, minStock, categoryId) VALUES 
@@ -137,9 +159,19 @@ db.serialize(() => {
         }
         console.log('Sample data inserted successfully');
         console.log('\nTest users:');
-        console.log('Admin: PIN 1234');
-        console.log('Manager: PIN 5678');
-        console.log('Cashier: PIN 9999');
+        console.log('Admin: PIN 1234 or NFC001');
+        console.log('Manager: PIN 5678 or NFC002');
+        console.log('Cashier: PIN 9999 or NFC003');
+        console.log('\nTest workers:');
+        console.log('Kitchen Worker 1: NFC WORKER001');
+        console.log('Kitchen Worker 2: NFC WORKER002');
+        console.log('Prep Worker: NFC WORKER003');
+        console.log('\nPages available:');
+        console.log('Main POS: http://localhost:3000');
+        console.log('Handheld Scanner: http://localhost:3000/handheld');
+        console.log('Worker Station: http://localhost:3000/worker');
+        console.log('Order Display: http://localhost:3000/order-display');
+        console.log('Customer Display: http://localhost:3000/customer-display');
     });
 });
 

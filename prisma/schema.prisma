@@ -25,6 +25,21 @@ model User {
   @@map("users")
 }
 
+model Worker {
+  id          String   @id @default(cuid())
+  name        String
+  pin         String
+  nfcCode     String?  @unique
+  isActive    Boolean  @default(true)
+  currentStation String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  transactions Transaction[]
+  
+  @@map("workers")
+}
+
 model Category {
   id          String   @id @default(cuid())
   name        String   @unique
@@ -77,22 +92,26 @@ model Customer {
 model Transaction {
   id          String   @id @default(cuid())
   receiptNumber String @unique
+  orderNumber Int      @unique
   subtotal    Float
   tax         Float    @default(0)
   discount    Float    @default(0)
   total       Float
   paymentMethod PaymentMethod @default(CASH)
   status      TransactionStatus @default(COMPLETED)
+  orderStatus OrderStatus @default(PENDING)
   notes       String?
   userId      String
   customerId  String?
+  workerId    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   user     User               @relation(fields: [userId], references: [id])
   customer Customer?          @relation(fields: [customerId], references: [id])
+  worker   Worker?            @relation(fields: [workerId], references: [id])
   items    TransactionItem[]
-  
+
   @@map("transactions")
 }
 
@@ -128,4 +147,12 @@ enum TransactionStatus {
   COMPLETED
   CANCELLED
   REFUNDED
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PROGRESS
+  READY
+  COMPLETED
+  CANCELLED
 }

@@ -5,8 +5,9 @@ export async function POST(request: NextRequest) {
   try {
     const { items, total, customerId, paymentMethod = 'CASH' } = await request.json()
 
-    // Generate receipt number
+    // Generate receipt number and order number
     const receiptNumber = `RCP-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    const orderNumber = Math.floor(Math.random() * 900) + 100 // Random 3-digit number
 
     // Calculate subtotal
     const subtotal = items.reduce((sum: number, item: { unitPrice: number; quantity: number }) => 
@@ -19,9 +20,9 @@ export async function POST(request: NextRequest) {
 
     // Insert transaction
     const transactionResult = await db.run(`
-      INSERT INTO transactions (receiptNumber, subtotal, tax, discount, total, paymentMethod, userId, customerId)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [receiptNumber, subtotal, tax, discount, total, paymentMethod, 'user1', customerId])
+      INSERT INTO transactions (receiptNumber, orderNumber, subtotal, tax, discount, total, paymentMethod, orderStatus, userId, customerId)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [receiptNumber, orderNumber, subtotal, tax, discount, total, paymentMethod, 'PENDING', 'user1', customerId])
 
     const transactionId = transactionResult.lastID
 

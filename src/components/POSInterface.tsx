@@ -47,6 +47,7 @@ export default function POSInterface() {
   const [showReceipt, setShowReceipt] = useState(false)
   const [receiptData, setReceiptData] = useState<{
     receiptNumber: string;
+    orderNumber: number;
     items: Array<{
       name: string;
       quantity: number;
@@ -207,6 +208,7 @@ export default function POSInterface() {
         // Create receipt data
         const receipt = {
           receiptNumber: transaction.receiptNumber,
+          orderNumber: transaction.orderNumber,
           items: cart.map(item => ({
             name: item.product.name,
             quantity: item.quantity,
@@ -244,6 +246,30 @@ export default function POSInterface() {
             <Button variant="outline" size="sm" onClick={openCustomerDisplay}>
               <Monitor className="w-4 h-4 mr-2" />
               Customer Display
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => window.open('/handheld', '_blank')}
+            >
+              <Smartphone className="w-4 h-4 mr-2" />
+              Handheld
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => window.open('/worker', '_blank')}
+            >
+              <User className="w-4 h-4 mr-2" />
+              Worker Station
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => window.open('/order-display', '_blank')}
+            >
+              <Monitor className="w-4 h-4 mr-2" />
+              Order Display
             </Button>
             <div className="flex items-center space-x-2">
               <User className="w-5 h-5 text-gray-600" />
