@@ -236,13 +236,15 @@ export default function POSInterface() {
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b px-6 py-4">
+      <header className="bg-white shadow-sm border-b px-4 lg:px-6 py-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">OpenPOS</h1>
-            <p className="text-sm text-gray-600">Point of Sale System</p>
+          <div className="min-w-0">
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-900 truncate">OpenPOS</h1>
+            <p className="text-xs lg:text-sm text-gray-600 hidden sm:block">Point of Sale System</p>
           </div>
-          <div className="flex items-center space-x-4">
+          
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center space-x-4">
             <Button variant="outline" size="sm" onClick={openCustomerDisplay}>
               <Monitor className="w-4 h-4 mr-2" />
               Customer Display
@@ -283,14 +285,60 @@ export default function POSInterface() {
               Logout
             </Button>
           </div>
+
+          {/* Mobile Navigation */}
+          <div className="flex lg:hidden items-center space-x-2">
+            <div className="flex items-center space-x-1">
+              <User className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-medium truncate max-w-20">{user?.name}</span>
+            </div>
+            <Button variant="outline" size="sm" onClick={logout}>
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+        
+        {/* Mobile Quick Actions */}
+        <div className="lg:hidden mt-3 flex gap-2 overflow-x-auto pb-2">
+          <Button variant="outline" size="sm" onClick={openCustomerDisplay} className="whitespace-nowrap">
+            <Monitor className="w-4 h-4 mr-1" />
+            Display
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.open('/handheld', '_blank')}
+            className="whitespace-nowrap"
+          >
+            <Smartphone className="w-4 h-4 mr-1" />
+            Handheld
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.open('/worker', '_blank')}
+            className="whitespace-nowrap"
+          >
+            <User className="w-4 h-4 mr-1" />
+            Worker
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.open('/order-display', '_blank')}
+            className="whitespace-nowrap"
+          >
+            <Monitor className="w-4 h-4 mr-1" />
+            Orders
+          </Button>
         </div>
       </header>
 
-      <div className="flex-1 flex">
+      <div className="flex-1 flex flex-col lg:flex-row">
         {/* Products Section */}
-        <div className="flex-1 p-6">
-          <div className="mb-6">
-            <div className="flex space-x-4">
+        <div className="flex-1 p-4 lg:p-6">
+          <div className="mb-4 lg:mb-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                 <Input
@@ -300,14 +348,16 @@ export default function POSInterface() {
                   className="pl-10"
                 />
               </div>
-              <Button variant="outline" onClick={() => setShowBarcodeScanner(true)}>
-                <ScanLine className="w-4 h-4 mr-2" />
-                Scan
-              </Button>
-              <Button variant="outline" onClick={() => setShowHandheldScanner(true)}>
-                <Smartphone className="w-4 h-4 mr-2" />
-                Handheld
-              </Button>
+              <div className="flex gap-2 sm:gap-3">
+                <Button variant="outline" onClick={() => setShowBarcodeScanner(true)} className="flex-1 sm:flex-none">
+                  <ScanLine className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Scan</span>
+                </Button>
+                <Button variant="outline" onClick={() => setShowHandheldScanner(true)} className="flex-1 sm:flex-none">
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Handheld</span>
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -316,22 +366,22 @@ export default function POSInterface() {
               <p className="text-gray-500">Loading products...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
               {filteredProducts.map((product) => (
                 <Card
                   key={product.id}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  className="cursor-pointer hover:shadow-md transition-shadow touch-manipulation"
                   onClick={() => addToCart(product)}
                 >
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 lg:p-4">
                     <div className="aspect-square bg-gray-100 rounded-md mb-3 flex items-center justify-center">
                       <span className="text-gray-400 text-xs">No Image</span>
                     </div>
-                    <h3 className="font-medium text-sm mb-1">{product.name}</h3>
+                    <h3 className="font-medium text-sm mb-1 line-clamp-2">{product.name}</h3>
                     <p className="text-lg font-bold text-green-600">
                       ${product.price.toFixed(2)}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 truncate">
                       Stock: {product.stock} • {product.category.name}
                     </p>
                   </CardContent>
@@ -341,9 +391,9 @@ export default function POSInterface() {
           )}
         </div>
 
-        {/* Cart Section */}
-        <div className="w-96 bg-white border-l">
-          <div className="p-6 border-b">
+        {/* Cart Section - Mobile Responsive */}
+        <div className="w-full lg:w-96 bg-white border-t lg:border-t-0 lg:border-l">
+          <div className="p-4 lg:p-6 border-b">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Cart</h2>
               <div className="flex items-center space-x-2">
@@ -355,22 +405,23 @@ export default function POSInterface() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto max-h-96">
+          <div className="flex-1 overflow-auto max-h-60 lg:max-h-96">
             {cart.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
+              <div className="p-4 lg:p-6 text-center text-gray-500">
                 <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                 <p>Your cart is empty</p>
               </div>
             ) : (
-              <div className="p-4 space-y-3">
+              <div className="p-3 lg:p-4 space-y-3">
                 {cart.map((item) => (
                   <div key={item.product.id} className="bg-gray-50 rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-sm">{item.product.name}</h3>
+                      <h3 className="font-medium text-sm flex-1 mr-2 line-clamp-2">{item.product.name}</h3>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => removeFromCart(item.product.id)}
+                        className="h-8 w-8 p-0 touch-manipulation"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -381,14 +432,16 @@ export default function POSInterface() {
                           variant="outline"
                           size="sm"
                           onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          className="h-8 w-8 p-0 touch-manipulation"
                         >
                           <Minus className="w-3 h-3" />
                         </Button>
-                        <span className="w-8 text-center">{item.quantity}</span>
+                        <span className="w-8 text-center text-sm">{item.quantity}</span>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          className="h-8 w-8 p-0 touch-manipulation"
                         >
                           <Plus className="w-3 h-3" />
                         </Button>
@@ -409,7 +462,7 @@ export default function POSInterface() {
           </div>
 
           {cart.length > 0 && (
-            <div className="border-t p-6 space-y-4">
+            <div className="border-t p-4 lg:p-6 space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total:</span>
@@ -419,7 +472,7 @@ export default function POSInterface() {
               
               <div className="space-y-2">
                 <Button 
-                  className="w-full" 
+                  className="w-full touch-manipulation" 
                   size="lg"
                   onClick={handleCheckout}
                 >
@@ -428,7 +481,7 @@ export default function POSInterface() {
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full" 
+                  className="w-full touch-manipulation" 
                   onClick={clearCart}
                 >
                   <Trash2 className="w-4 h-4 mr-2" />

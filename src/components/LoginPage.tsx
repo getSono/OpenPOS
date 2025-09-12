@@ -74,7 +74,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">OpenPOS</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">OpenPOS</h1>
           <p className="text-gray-600">Point of Sale System</p>
         </div>
 
@@ -95,7 +95,7 @@ export default function LoginPage() {
                   value={pin}
                   onChange={(e) => handlePinChange(e.target.value)}
                   placeholder="Enter PIN"
-                  className="text-center text-2xl tracking-widest"
+                  className="text-center text-xl sm:text-2xl tracking-widest h-12 sm:h-14"
                   maxLength={6}
                 />
               </div>
@@ -106,7 +106,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-12 text-base touch-manipulation"
                 disabled={pin.length < 4 || isLoading}
               >
                 {isLoading ? 'Signing In...' : 'Sign In'}
@@ -121,7 +121,7 @@ export default function LoginPage() {
 
             <Button
               variant="outline"
-              className="w-full"
+              className="w-full h-12 text-base touch-manipulation"
               onClick={() => setShowNFCReader(true)}
               disabled={isLoading}
             >
@@ -129,13 +129,13 @@ export default function LoginPage() {
               Use NFC Card
             </Button>
 
-            {/* Number Pad */}
+            {/* Number Pad - Optimized for Touch */}
             <div className="grid grid-cols-3 gap-3">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                 <Button
                   key={num}
                   variant="outline"
-                  className="h-12 text-lg"
+                  className="h-14 sm:h-16 text-lg sm:text-xl font-semibold touch-manipulation hover:bg-blue-50"
                   onClick={() => handleNumberClick(num.toString())}
                 >
                   {num}
@@ -143,21 +143,21 @@ export default function LoginPage() {
               ))}
               <Button
                 variant="outline"
-                className="h-12"
+                className="h-14 sm:h-16 text-sm sm:text-base touch-manipulation hover:bg-red-50"
                 onClick={handleClear}
               >
                 Clear
               </Button>
               <Button
                 variant="outline"
-                className="h-12 text-lg"
+                className="h-14 sm:h-16 text-lg sm:text-xl font-semibold touch-manipulation hover:bg-blue-50"
                 onClick={() => handleNumberClick('0')}
               >
                 0
               </Button>
               <Button
                 variant="outline"
-                className="h-12"
+                className="h-14 sm:h-16 text-lg sm:text-xl touch-manipulation hover:bg-red-50"
                 onClick={handleBackspace}
               >
                 ⌫

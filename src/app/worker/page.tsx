@@ -169,7 +169,7 @@ export default function WorkerPage() {
 
   if (!currentWorker) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -186,10 +186,12 @@ export default function WorkerPage() {
                   onChange={(e) => setNfcInput(e.target.value)}
                   placeholder="Tap NFC card or enter worker code"
                   onKeyPress={(e) => e.key === 'Enter' && authenticateWorker()}
+                  className="touch-manipulation"
                 />
                 <Button 
                   onClick={authenticateWorker} 
                   disabled={!nfcInput || loading}
+                  className="touch-manipulation"
                 >
                   {loading ? 'Authenticating...' : 'Login'}
                 </Button>
@@ -209,69 +211,80 @@ export default function WorkerPage() {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Worker Station</h1>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Worker Station</h1>
               <div className="flex items-center space-x-2">
-                <User className="h-5 w-5 text-gray-500" />
-                <span className="font-medium">{currentWorker.name}</span>
+                <User className="h-4 lg:h-5 w-4 lg:w-5 text-gray-500" />
+                <span className="font-medium text-sm lg:text-base">{currentWorker.name}</span>
                 {currentWorker.currentStation && (
-                  <Badge variant="outline">{currentWorker.currentStation}</Badge>
+                  <Badge variant="outline" className="text-xs">{currentWorker.currentStation}</Badge>
                 )}
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-500">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <div className="text-xs lg:text-sm text-gray-500 text-center sm:text-left">
                 Last updated: {lastUpdate.toLocaleTimeString()}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchOrders}
-                disabled={loading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchOrders}
+                  disabled={loading}
+                  className="touch-manipulation"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleLogout}
+                  className="touch-manipulation"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Logout</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-6">
         <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="pending" className="relative">
-              Pending
+          <TabsList className="grid w-full grid-cols-4 h-12 lg:h-auto">
+            <TabsTrigger value="pending" className="relative text-xs lg:text-sm touch-manipulation">
+              <span className="hidden sm:inline">Pending</span>
+              <span className="sm:hidden">Pend</span>
               {getOrdersByStatus('PENDING').length > 0 && (
-                <Badge className="ml-2 bg-yellow-500">
+                <Badge className="ml-1 lg:ml-2 bg-yellow-500 text-xs px-1">
                   {getOrdersByStatus('PENDING').length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="in-progress" className="relative">
-              In Progress
+            <TabsTrigger value="in-progress" className="relative text-xs lg:text-sm touch-manipulation">
+              <span className="hidden sm:inline">In Progress</span>
+              <span className="sm:hidden">Prog</span>
               {getOrdersByStatus('IN_PROGRESS').length > 0 && (
-                <Badge className="ml-2 bg-blue-500">
+                <Badge className="ml-1 lg:ml-2 bg-blue-500 text-xs px-1">
                   {getOrdersByStatus('IN_PROGRESS').length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="ready" className="relative">
+            <TabsTrigger value="ready" className="relative text-xs lg:text-sm touch-manipulation">
               Ready
               {getOrdersByStatus('READY').length > 0 && (
-                <Badge className="ml-2 bg-green-500">
+                <Badge className="ml-1 lg:ml-2 bg-green-500 text-xs px-1">
                   {getOrdersByStatus('READY').length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="completed">
-              Completed
+            <TabsTrigger value="completed" className="text-xs lg:text-sm touch-manipulation">
+              <span className="hidden sm:inline">Completed</span>
+              <span className="sm:hidden">Done</span>
             </TabsTrigger>
           </TabsList>
 
@@ -284,8 +297,8 @@ export default function WorkerPage() {
               <TabsContent key={status} value={status} className="space-y-4">
                 {statusOrders.length === 0 ? (
                   <Card>
-                    <CardContent className="py-12 text-center">
-                      <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                    <CardContent className="py-8 lg:py-12 text-center">
+                      <Package className="h-8 lg:h-12 w-8 lg:w-12 mx-auto text-gray-400 mb-4" />
                       <p className="text-gray-500">No {status.replace('-', ' ')} orders</p>
                     </CardContent>
                   </Card>
@@ -295,19 +308,19 @@ export default function WorkerPage() {
                       <Card key={order.id} className="hover:shadow-lg transition-shadow">
                         <CardHeader className="pb-3">
                           <div className="flex justify-between items-start">
-                            <div>
-                              <CardTitle className="text-lg">
+                            <div className="min-w-0 flex-1">
+                              <CardTitle className="text-base lg:text-lg">
                                 Order #{order.orderNumber}
                               </CardTitle>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-xs lg:text-sm text-gray-500">
                                 {formatTime(order.createdAt)} • {getTimeSince(order.createdAt)}
                               </p>
-                              <p className="text-sm text-gray-600">
+                              <p className="text-xs lg:text-sm text-gray-600 truncate">
                                 Cashier: {order.user.name}
                               </p>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <StatusIcon className={`h-5 w-5 text-white rounded-full p-1 ${statusColors[statusKey]}`} />
+                            <div className="flex items-center space-x-2 flex-shrink-0">
+                              <StatusIcon className={`h-4 lg:h-5 w-4 lg:w-5 text-white rounded-full p-1 ${statusColors[statusKey]}`} />
                               <Badge variant="outline" className="text-xs">
                                 ${order.total.toFixed(2)}
                               </Badge>
@@ -315,11 +328,11 @@ export default function WorkerPage() {
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                          <div className="space-y-2">
+                          <div className="space-y-2 max-h-24 overflow-y-auto">
                             {order.items.map((item, index) => (
-                              <div key={index} className="flex justify-between text-sm">
-                                <span>{item.quantity}x {item.product.name}</span>
-                                <span>${(item.quantity * item.unitPrice).toFixed(2)}</span>
+                              <div key={index} className="flex justify-between text-xs lg:text-sm">
+                                <span className="truncate">{item.quantity}x {item.product.name}</span>
+                                <span className="flex-shrink-0">${(item.quantity * item.unitPrice).toFixed(2)}</span>
                               </div>
                             ))}
                           </div>
@@ -329,7 +342,7 @@ export default function WorkerPage() {
                           <div className="flex space-x-2">
                             {statusKey === 'PENDING' && (
                               <Button
-                                className="flex-1"
+                                className="flex-1 h-10 lg:h-auto text-sm lg:text-base touch-manipulation"
                                 onClick={() => updateOrderStatus(order.id, 'IN_PROGRESS')}
                                 disabled={loading}
                               >
@@ -338,7 +351,7 @@ export default function WorkerPage() {
                             )}
                             {statusKey === 'IN_PROGRESS' && (
                               <Button
-                                className="flex-1"
+                                className="flex-1 h-10 lg:h-auto text-sm lg:text-base touch-manipulation"
                                 onClick={() => updateOrderStatus(order.id, 'READY')}
                                 disabled={loading}
                               >
@@ -347,7 +360,7 @@ export default function WorkerPage() {
                             )}
                             {statusKey === 'READY' && (
                               <Button
-                                className="flex-1"
+                                className="flex-1 h-10 lg:h-auto text-sm lg:text-base touch-manipulation"
                                 onClick={() => updateOrderStatus(order.id, 'COMPLETED')}
                                 disabled={loading}
                               >

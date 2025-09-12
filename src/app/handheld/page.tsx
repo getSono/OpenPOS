@@ -116,11 +116,11 @@ export default function HandheldPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <QrCode className="h-6 w-6" />
-            <h1 className="text-xl font-bold">Handheld Scanner</h1>
+            <h1 className="text-lg sm:text-xl font-bold">Handheld Scanner</h1>
           </div>
           <div className="flex items-center space-x-2">
             <Wifi className={`h-4 w-4 ${isConnected ? 'text-green-500' : 'text-red-500'}`} />
-            <Badge variant={isConnected ? 'default' : 'destructive'}>
+            <Badge variant={isConnected ? 'default' : 'destructive'} className="text-xs">
               {isConnected ? 'Connected' : 'Connecting...'}
             </Badge>
           </div>
@@ -130,7 +130,7 @@ export default function HandheldPage() {
         {!currentUser ? (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center space-x-2 text-base">
                 <User className="h-5 w-5" />
                 <span>Authentication Required</span>
               </CardTitle>
@@ -143,9 +143,9 @@ export default function HandheldPage() {
                     value={nfcInput}
                     onChange={(e) => setNfcInput(e.target.value)}
                     placeholder="Tap NFC card or enter code"
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-gray-800 border-gray-700 touch-manipulation"
                   />
-                  <Button onClick={authenticateNFC} disabled={!nfcInput}>
+                  <Button onClick={authenticateNFC} disabled={!nfcInput} className="touch-manipulation">
                     Auth
                   </Button>
                 </div>
@@ -161,14 +161,14 @@ export default function HandheldPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <User className="h-5 w-5" />
-                    <div>
-                      <p className="font-medium">{currentUser.name}</p>
+                  <div className="flex items-center space-x-2 min-w-0 flex-1">
+                    <User className="h-5 w-5 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{currentUser.name}</p>
                       <p className="text-sm text-gray-400">{currentUser.role}</p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" onClick={handleLogout}>
+                  <Button variant="outline" size="sm" onClick={handleLogout} className="touch-manipulation">
                     Logout
                   </Button>
                 </div>
@@ -177,15 +177,15 @@ export default function HandheldPage() {
 
             {/* Scanner Interface */}
             <Tabs defaultValue="barcode" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-gray-800">
-                <TabsTrigger value="barcode">Barcode</TabsTrigger>
-                <TabsTrigger value="nfc">NFC</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 bg-gray-800 h-12">
+                <TabsTrigger value="barcode" className="touch-manipulation">Barcode</TabsTrigger>
+                <TabsTrigger value="nfc" className="touch-manipulation">NFC</TabsTrigger>
               </TabsList>
               
               <TabsContent value="barcode" className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
+                    <CardTitle className="flex items-center space-x-2 text-base">
                       <QrCode className="h-5 w-5" />
                       <span>Barcode Scanner</span>
                     </CardTitle>
@@ -197,12 +197,13 @@ export default function HandheldPage() {
                           value={barcodeInput}
                           onChange={(e) => setBarcodeInput(e.target.value)}
                           placeholder="Scan or enter barcode"
-                          className="bg-gray-800 border-gray-700"
+                          className="bg-gray-800 border-gray-700 touch-manipulation h-12"
                           disabled={scanning}
                         />
                         <Button 
                           onClick={handleBarcodeSubmit} 
                           disabled={!barcodeInput || scanning}
+                          className="touch-manipulation h-12 px-4"
                         >
                           {scanning ? 'Scanning...' : 'Scan'}
                         </Button>
@@ -218,14 +219,14 @@ export default function HandheldPage() {
               <TabsContent value="nfc" className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
+                    <CardTitle className="flex items-center space-x-2 text-base">
                       <Wifi className="h-5 w-5" />
                       <span>NFC Scanner</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="text-center py-8">
-                      <Wifi className="h-12 w-12 mx-auto mb-4 text-blue-500" />
+                    <div className="text-center py-6 lg:py-8">
+                      <Wifi className="h-10 lg:h-12 w-10 lg:w-12 mx-auto mb-4 text-blue-500" />
                       <p className="text-gray-400">Ready to scan NFC tags</p>
                       <p className="text-xs text-gray-500 mt-2">
                         Bring NFC tag close to device
@@ -241,8 +242,8 @@ export default function HandheldPage() {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">{lastAction}</span>
+                    <Clock className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <span className="text-sm break-words">{lastAction}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -252,19 +253,19 @@ export default function HandheldPage() {
             {scannedProducts.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
+                  <CardTitle className="flex items-center space-x-2 text-base">
                     <Package className="h-5 w-5" />
                     <span>Recent Scans</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {scannedProducts.map((product, index) => (
-                    <div key={index} className="flex items-center justify-between py-2">
-                      <div>
-                        <p className="font-medium">{product.name}</p>
+                    <div key={index} className="flex items-center justify-between py-2 min-w-0">
+                      <div className="min-w-0 flex-1 mr-3">
+                        <p className="font-medium truncate">{product.name}</p>
                         <p className="text-sm text-gray-400">${product.price.toFixed(2)}</p>
                       </div>
-                      <Badge variant="outline">
+                      <Badge variant="outline" className="flex-shrink-0">
                         Stock: {product.stock}
                       </Badge>
                     </div>
