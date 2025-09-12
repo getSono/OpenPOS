@@ -42,8 +42,9 @@ export default function LoginPage() {
 
   const handleNumberClick = (num: string) => {
     if (pin.length < 6) {
-      setPin(pin + num)
-      setError('')
+      const newPin = pin + num;
+      setPin(newPin);
+      setError('');
     }
   }
 
@@ -53,7 +54,7 @@ export default function LoginPage() {
   }
 
   const handleBackspace = () => {
-    setPin(pin.slice(0, -1))
+    setPin(prevPin => prevPin.slice(0, -1))
     setError('')
   }
 
