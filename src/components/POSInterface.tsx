@@ -289,31 +289,36 @@ export default function POSInterface() {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex flex-col">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b px-6 py-4">
+      <header className="bg-white/90 backdrop-blur-lg shadow-xl border-b border-white/50 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">OpenPOS</h1>
-              <p className="text-sm text-gray-600">Point of Sale System</p>
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <ShoppingCart className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">OpenPOS</h1>
+                <p className="text-sm text-gray-600 font-medium">Point of Sale System</p>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Badge variant={mode === 'kitchen' ? 'default' : 'outline'}>
+            <div className="flex items-center space-x-3">
+              <Badge variant={mode === 'kitchen' ? 'default' : 'outline'} className={mode === 'kitchen' ? 'bg-gradient-to-r from-purple-500 to-blue-600 text-white' : ''}>
                 {mode === 'kitchen' ? <ChefHat className="w-3 h-3 mr-1" /> : null}
                 {mode === 'kitchen' ? 'Kitchen Mode' : 'Normal Mode'}
               </Badge>
-              <Button variant="outline" size="sm" onClick={toggleMode}>
+              <Button variant="outline" size="sm" onClick={toggleMode} className="hover:bg-purple-50">
                 {mode === 'normal' ? <ToggleLeft className="w-4 h-4" /> : <ToggleRight className="w-4 h-4" />}
               </Button>
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
+            <Button variant="outline" size="sm" onClick={() => setShowSettings(true)} className="hover:bg-purple-50">
               <Settings className="w-4 h-4 mr-2" />
               Settings
             </Button>
-            <Button variant="outline" size="sm" onClick={openCustomerDisplay}>
+            <Button variant="outline" size="sm" onClick={openCustomerDisplay} className="hover:bg-blue-50">
               <Monitor className="w-4 h-4 mr-2" />
               Customer Display
             </Button>
@@ -321,6 +326,7 @@ export default function POSInterface() {
               variant="outline" 
               size="sm" 
               onClick={() => window.open('/handheld', '_blank')}
+              className="hover:bg-indigo-50"
             >
               <Smartphone className="w-4 h-4 mr-2" />
               Handheld
@@ -330,6 +336,7 @@ export default function POSInterface() {
                 variant="outline" 
                 size="sm" 
                 onClick={() => window.open('/worker', '_blank')}
+                className="hover:bg-green-50"
               >
                 <User className="w-4 h-4 mr-2" />
                 Worker Station
@@ -339,18 +346,23 @@ export default function POSInterface() {
               variant="outline" 
               size="sm" 
               onClick={() => window.open('/order-display', '_blank')}
+              className="hover:bg-red-50"
             >
               <Monitor className="w-4 h-4 mr-2" />
               Order Display
             </Button>
-            <div className="flex items-center space-x-2">
-              <User className="w-5 h-5 text-gray-600" />
-              <span className="text-sm font-medium">{user?.name}</span>
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                {user?.role}
-              </span>
+            <div className="flex items-center space-x-3 px-4 py-2 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200/50">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <User className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <span className="text-sm font-semibold text-gray-800">{user?.name}</span>
+                <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full ml-2 font-medium">
+                  {user?.role}
+                </span>
+              </div>
             </div>
-            <Button variant="outline" size="sm" onClick={logout}>
+            <Button variant="outline" size="sm" onClick={logout} className="hover:bg-red-50 text-red-600 border-red-200">
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
@@ -364,19 +376,19 @@ export default function POSInterface() {
           <div className="mb-6">
             <div className="flex space-x-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <Input
                   placeholder="Search products or scan barcode..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 h-12 rounded-xl bg-white/80 backdrop-blur-sm border-purple-200/50 focus:border-purple-400 shadow-lg"
                 />
               </div>
-              <Button variant="outline" onClick={() => setShowBarcodeScanner(true)}>
+              <Button variant="outline" onClick={() => setShowBarcodeScanner(true)} className="h-12 px-6 rounded-xl bg-white/80 backdrop-blur-sm hover:bg-blue-50 border-blue-200/50">
                 <ScanLine className="w-4 h-4 mr-2" />
                 Scan
               </Button>
-              <Button variant="outline" onClick={() => setShowHandheldScanner(true)}>
+              <Button variant="outline" onClick={() => setShowHandheldScanner(true)} className="h-12 px-6 rounded-xl bg-white/80 backdrop-blur-sm hover:bg-purple-50 border-purple-200/50">
                 <Smartphone className="w-4 h-4 mr-2" />
                 Handheld
               </Button>
@@ -384,28 +396,32 @@ export default function POSInterface() {
           </div>
 
           {loading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">Loading products...</p>
+            <div className="text-center py-16">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 animate-pulse">
+                <ShoppingCart className="w-8 h-8 text-white" />
+              </div>
+              <p className="text-gray-500 font-medium">Loading products...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {filteredProducts.map((product) => (
                 <Card
                   key={product.id}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  className="cursor-pointer hover:shadow-2xl transition-all duration-300 hover:scale-105 bg-white/90 backdrop-blur-lg border-0 shadow-xl group"
                   onClick={() => addToCart(product)}
                 >
-                  <CardContent className="p-4">
-                    <div className="aspect-square bg-gray-100 rounded-md mb-3 flex items-center justify-center">
-                      <span className="text-gray-400 text-xs">No Image</span>
+                  <CardContent className="p-6">
+                    <div className="aspect-square bg-gradient-to-br from-gray-50 to-purple-50 rounded-2xl mb-4 flex items-center justify-center group-hover:from-purple-50 group-hover:to-blue-50 transition-all duration-300">
+                      <span className="text-gray-400 text-sm font-medium">No Image</span>
                     </div>
-                    <h3 className="font-medium text-sm mb-1">{product.name}</h3>
-                    <p className="text-lg font-bold text-green-600">
+                    <h3 className="font-semibold text-gray-800 mb-2 group-hover:text-purple-700 transition-colors">{product.name}</h3>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
                       ${product.price.toFixed(2)}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      Stock: {product.stock} • {product.category.name}
-                    </p>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Stock: {product.stock}</span>
+                      <span className="text-purple-600 bg-purple-100 px-2 py-1 rounded-full font-medium">{product.category.name}</span>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -414,13 +430,17 @@ export default function POSInterface() {
         </div>
 
         {/* Cart Section */}
-        <div className="w-96 bg-white border-l">
-          <div className="p-6 border-b">
+        <div className="w-96 bg-white/90 backdrop-blur-lg border-l border-white/50 shadow-2xl">
+          <div className="p-6 border-b border-gray-200/50">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Cart</h2>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center">
+                  <ShoppingCart className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-800">Cart</h2>
+              </div>
               <div className="flex items-center space-x-2">
-                <ShoppingCart className="w-5 h-5" />
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 bg-gradient-to-r from-purple-50 to-blue-50 px-3 py-1 rounded-full font-medium">
                   {cart.reduce((total, item) => total + item.quantity, 0)} items
                 </span>
               </div>
@@ -429,20 +449,24 @@ export default function POSInterface() {
 
           <div className="flex-1 overflow-auto max-h-96">
             {cart.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
-                <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>Your cart is empty</p>
+              <div className="p-8 text-center text-gray-500">
+                <div className="w-16 h-16 bg-gray-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                  <ShoppingCart className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="font-medium">Your cart is empty</p>
+                <p className="text-sm text-gray-400 mt-1">Add products to get started</p>
               </div>
             ) : (
-              <div className="p-4 space-y-3">
+              <div className="p-4 space-y-4">
                 {cart.map((item) => (
-                  <div key={item.product.id} className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-sm">{item.product.name}</h3>
+                  <div key={item.product.id} className="bg-gradient-to-r from-gray-50 to-purple-50 rounded-2xl p-4 border border-purple-100/50 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-800 text-sm">{item.product.name}</h3>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => removeFromCart(item.product.id)}
+                        className="hover:bg-red-100 hover:text-red-600 h-8 w-8 p-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -453,23 +477,25 @@ export default function POSInterface() {
                           variant="outline"
                           size="sm"
                           onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          className="h-8 w-8 p-0 hover:bg-red-50 hover:border-red-200"
                         >
                           <Minus className="w-3 h-3" />
                         </Button>
-                        <span className="w-8 text-center">{item.quantity}</span>
+                        <span className="w-8 text-center font-semibold">{item.quantity}</span>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          className="h-8 w-8 p-0 hover:bg-green-50 hover:border-green-200"
                         >
                           <Plus className="w-3 h-3" />
                         </Button>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-xs text-gray-500">
                           ${item.product.price.toFixed(2)} each
                         </p>
-                        <p className="font-semibold">
+                        <p className="font-bold text-purple-700">
                           ${(item.product.price * item.quantity).toFixed(2)}
                         </p>
                       </div>
@@ -481,26 +507,28 @@ export default function POSInterface() {
           </div>
 
           {cart.length > 0 && (
-            <div className="border-t p-6 space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-lg font-semibold">
-                  <span>Total:</span>
-                  <span>${calculateTotal().toFixed(2)}</span>
+            <div className="border-t border-gray-200/50 p-6 space-y-6 bg-gradient-to-br from-purple-50/50 to-blue-50/50">
+              <div className="space-y-3">
+                <div className="flex justify-between text-2xl font-bold">
+                  <span className="text-gray-800">Total:</span>
+                  <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    ${calculateTotal().toFixed(2)}
+                  </span>
                 </div>
               </div>
               
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Button 
-                  className="w-full" 
+                  className="w-full bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white h-12 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200" 
                   size="lg"
                   onClick={openCheckout}
                 >
-                  <CreditCard className="w-4 h-4 mr-2" />
+                  <CreditCard className="w-5 h-5 mr-2" />
                   Checkout
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full" 
+                  className="w-full h-12 rounded-xl hover:bg-red-50 hover:border-red-200 hover:text-red-600" 
                   onClick={clearCart}
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
