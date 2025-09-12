@@ -110,65 +110,87 @@ export default function HandheldPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
-      <div className="max-w-md mx-auto space-y-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white p-4">
+      <div className="max-w-md mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <QrCode className="h-6 w-6" />
-            <h1 className="text-xl font-bold">Handheld Scanner</h1>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Wifi className={`h-4 w-4 ${isConnected ? 'text-green-500' : 'text-red-500'}`} />
-            <Badge variant={isConnected ? 'default' : 'destructive'}>
-              {isConnected ? 'Connected' : 'Connecting...'}
-            </Badge>
+        <div className="glass-dark rounded-2xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                <QrCode className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold">Handheld Scanner</h1>
+                <p className="text-sm text-gray-300">Mobile POS Terminal</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'} animate-pulse`}></div>
+              <Badge variant={isConnected ? 'default' : 'destructive'} className="text-xs">
+                {isConnected ? 'Connected' : 'Connecting...'}
+              </Badge>
+            </div>
           </div>
         </div>
 
         {/* User Authentication */}
         {!currentUser ? (
-          <Card>
+          <Card className="bg-white/10 backdrop-blur-lg border-white/20 shadow-2xl">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <User className="h-5 w-5" />
+              <CardTitle className="flex items-center space-x-2 text-white">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                  <User className="h-5 w-5 text-white" />
+                </div>
                 <span>Authentication Required</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">NFC Authentication</label>
-                <div className="flex space-x-2">
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-gray-200">NFC Authentication</label>
+                <div className="flex space-x-3">
                   <Input
                     value={nfcInput}
                     onChange={(e) => setNfcInput(e.target.value)}
                     placeholder="Tap NFC card or enter code"
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white/20 border-white/30 text-white placeholder:text-gray-300 focus:border-white/50"
                   />
-                  <Button onClick={authenticateNFC} disabled={!nfcInput}>
+                  <Button 
+                    onClick={authenticateNFC} 
+                    disabled={!nfcInput}
+                    className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-6"
+                  >
                     Auth
                   </Button>
                 </div>
-                <p className="text-xs text-gray-400">
-                  Test codes: NFC001 (Admin), NFC002 (Manager), NFC003 (Cashier)
-                </p>
+                <div className="p-3 rounded-lg bg-blue-500/20 border border-blue-400/30">
+                  <p className="text-xs text-blue-200">
+                    Test codes: NFC001 (Admin), NFC002 (Manager), NFC003 (Cashier)
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
         ) : (
           <>
             {/* Current User */}
-            <Card>
+            <Card className="bg-white/10 backdrop-blur-lg border-white/20 shadow-xl">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <User className="h-5 w-5" />
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                      <User className="h-5 w-5 text-white" />
+                    </div>
                     <div>
-                      <p className="font-medium">{currentUser.name}</p>
-                      <p className="text-sm text-gray-400">{currentUser.role}</p>
+                      <p className="font-semibold text-white">{currentUser.name}</p>
+                      <p className="text-sm text-gray-300">{currentUser.role}</p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" onClick={handleLogout}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleLogout}
+                    className="border-white/30 text-white hover:bg-white/20"
+                  >
                     Logout
                   </Button>
                 </div>
@@ -177,57 +199,78 @@ export default function HandheldPage() {
 
             {/* Scanner Interface */}
             <Tabs defaultValue="barcode" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-gray-800">
-                <TabsTrigger value="barcode">Barcode</TabsTrigger>
-                <TabsTrigger value="nfc">NFC</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 bg-white/10 backdrop-blur-lg border-white/20">
+                <TabsTrigger value="barcode" className="data-[state=active]:bg-white/20 data-[state=active]:text-white">
+                  Barcode
+                </TabsTrigger>
+                <TabsTrigger value="nfc" className="data-[state=active]:bg-white/20 data-[state=active]:text-white">
+                  NFC
+                </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="barcode" className="space-y-4">
-                <Card>
+              <TabsContent value="barcode" className="space-y-4 mt-6">
+                <Card className="bg-white/10 backdrop-blur-lg border-white/20 shadow-xl">
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <QrCode className="h-5 w-5" />
+                    <CardTitle className="flex items-center space-x-2 text-white">
+                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                        <QrCode className="h-5 w-5 text-white" />
+                      </div>
                       <span>Barcode Scanner</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex space-x-2">
+                    <div className="space-y-3">
+                      <div className="flex space-x-3">
                         <Input
                           value={barcodeInput}
                           onChange={(e) => setBarcodeInput(e.target.value)}
                           placeholder="Scan or enter barcode"
-                          className="bg-gray-800 border-gray-700"
+                          className="bg-white/20 border-white/30 text-white placeholder:text-gray-300 focus:border-white/50"
                           disabled={scanning}
                         />
                         <Button 
                           onClick={handleBarcodeSubmit} 
                           disabled={!barcodeInput || scanning}
+                          size="lg"
+                          className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 px-6"
                         >
-                          {scanning ? 'Scanning...' : 'Scan'}
+                          {scanning ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Scan...
+                            </>
+                          ) : (
+                            'Scan'
+                          )}
                         </Button>
                       </div>
-                      <p className="text-xs text-gray-400">
-                        Test barcode: 1234567890123
-                      </p>
+                      <div className="p-3 rounded-lg bg-blue-500/20 border border-blue-400/30">
+                        <p className="text-xs text-blue-200">
+                          Test barcode: 1234567890123
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              <TabsContent value="nfc" className="space-y-4">
-                <Card>
+              <TabsContent value="nfc" className="space-y-4 mt-6">
+                <Card className="bg-white/10 backdrop-blur-lg border-white/20 shadow-xl">
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Wifi className="h-5 w-5" />
+                    <CardTitle className="flex items-center space-x-2 text-white">
+                      <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
+                        <Wifi className="h-5 w-5 text-white" />
+                      </div>
                       <span>NFC Scanner</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="text-center py-8">
-                      <Wifi className="h-12 w-12 mx-auto mb-4 text-blue-500" />
-                      <p className="text-gray-400">Ready to scan NFC tags</p>
-                      <p className="text-xs text-gray-500 mt-2">
+                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+                        <Wifi className="h-8 w-8 text-white" />
+                      </div>
+                      <p className="text-gray-200 font-medium">Ready to scan NFC tags</p>
+                      <p className="text-xs text-gray-400 mt-2">
                         Bring NFC tag close to device
                       </p>
                     </div>
@@ -238,11 +281,13 @@ export default function HandheldPage() {
 
             {/* Last Action */}
             {lastAction && (
-              <Card>
+              <Card className="bg-white/10 backdrop-blur-lg border-white/20 shadow-xl animate-in">
                 <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">{lastAction}</span>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
+                      <CheckCircle className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm text-white font-medium">{lastAction}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -250,21 +295,23 @@ export default function HandheldPage() {
 
             {/* Recent Scans */}
             {scannedProducts.length > 0 && (
-              <Card>
+              <Card className="bg-white/10 backdrop-blur-lg border-white/20 shadow-xl">
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Package className="h-5 w-5" />
+                  <CardTitle className="flex items-center space-x-2 text-white">
+                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                      <Package className="h-5 w-5 text-white" />
+                    </div>
                     <span>Recent Scans</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-3">
                   {scannedProducts.map((product, index) => (
-                    <div key={index} className="flex items-center justify-between py-2">
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-white/10 border border-white/20">
                       <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-sm text-gray-400">${product.price.toFixed(2)}</p>
+                        <p className="font-medium text-white">{product.name}</p>
+                        <p className="text-sm text-gray-300">${product.price.toFixed(2)}</p>
                       </div>
-                      <Badge variant="outline">
+                      <Badge variant="outline" className="border-white/30 text-white">
                         Stock: {product.stock}
                       </Badge>
                     </div>
