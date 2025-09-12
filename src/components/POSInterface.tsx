@@ -199,7 +199,7 @@ export default function POSInterface() {
   }
 
   const handleCheckout = async (paymentData: {
-    paymentMethod: 'CASH' | 'PAYPAL'
+    paymentMethod: 'CASH'
     amountPaid?: number
     changeAmount?: number
   }) => {
