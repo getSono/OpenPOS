@@ -97,6 +97,8 @@ model Transaction {
   tax         Float    @default(0)
   discount    Float    @default(0)
   total       Float
+  amountPaid  Float?
+  changeAmount Float?   @default(0)
   paymentMethod PaymentMethod @default(CASH)
   status      TransactionStatus @default(COMPLETED)
   orderStatus OrderStatus @default(PENDING)
@@ -104,13 +106,15 @@ model Transaction {
   userId      String
   customerId  String?
   workerId    String?
+  discountCodeId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user     User               @relation(fields: [userId], references: [id])
-  customer Customer?          @relation(fields: [customerId], references: [id])
-  worker   Worker?            @relation(fields: [workerId], references: [id])
-  items    TransactionItem[]
+  user         User               @relation(fields: [userId], references: [id])
+  customer     Customer?          @relation(fields: [customerId], references: [id])
+  worker       Worker?            @relation(fields: [workerId], references: [id])
+  discountCode DiscountCode?      @relation(fields: [discountCodeId], references: [id])
+  items        TransactionItem[]
 
   @@map("transactions")
 }
@@ -129,6 +133,27 @@ model TransactionItem {
   @@map("transaction_items")
 }
 
+model DiscountCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  type        DiscountType @default(PERCENTAGE)
+  value       Float
+  minAmount   Float?   @default(0)
+  maxUses     Int?
+  currentUses Int      @default(0)
+  isActive    Boolean  @default(true)
+  validFrom   DateTime @default(now())
+  validUntil  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  transactions Transaction[]
+  
+  @@map("discount_codes")
+}
+
 enum Role {
   ADMIN
   MANAGER
@@ -140,6 +165,7 @@ enum PaymentMethod {
   CARD
   DIGITAL
   CHECK
+  PAYPAL
 }
 
 enum TransactionStatus {
@@ -155,4 +181,9 @@ enum OrderStatus {
   READY
   COMPLETED
   CANCELLED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
 }

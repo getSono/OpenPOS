@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ModeProvider } from "@/contexts/ModeContext";
 
 export const metadata: Metadata = {
   title: "OpenPOS - Point of Sale System",
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <AuthProvider>
-          {children}
+          <ModeProvider>
+            {children}
+          </ModeProvider>
         </AuthProvider>
       </body>
     </html>

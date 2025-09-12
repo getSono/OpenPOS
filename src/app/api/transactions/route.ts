@@ -3,26 +3,40 @@ import { db } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
-    const { items, total, customerId, paymentMethod = 'CASH' } = await request.json()
+    const { 
+      items, 
+      total, 
+      customerId, 
+      paymentMethod = 'CASH',
+      amountPaid,
+      changeAmount,
+      discountCode
+    } = await request.json()
 
     // Generate receipt number and order number
     const receiptNumber = `RCP-${Date.now()}-${Math.floor(Math.random() * 1000)}`
     const orderNumber = Math.floor(Math.random() * 900) + 100 // Random 3-digit number
 
-    // Calculate subtotal
+    // Calculate subtotal and discount
     const subtotal = items.reduce((sum: number, item: { unitPrice: number; quantity: number }) => 
       sum + (item.unitPrice * item.quantity), 0
     )
 
-    // For now, we'll assume no tax or discount
-    const tax = 0
-    const discount = 0
+    // Apply discount if provided
+    const discount = discountCode ? discountCode.discountAmount : 0
+    const tax = 0 // For now, we'll assume no tax
 
-    // Insert transaction
+    // Insert transaction with enhanced fields
     const transactionResult = await db.run(`
-      INSERT INTO transactions (receiptNumber, orderNumber, subtotal, tax, discount, total, paymentMethod, orderStatus, userId, customerId)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [receiptNumber, orderNumber, subtotal, tax, discount, total, paymentMethod, 'PENDING', 'user1', customerId])
+      INSERT INTO transactions (
+        receiptNumber, orderNumber, subtotal, tax, discount, total, 
+        paymentMethod, orderStatus, userId, customerId, amountPaid, changeAmount, discountCodeId
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      receiptNumber, orderNumber, subtotal, tax, discount, total, 
+      paymentMethod, 'PENDING', 'user1', customerId, amountPaid, changeAmount, discountCode?.id || null
+    ])
 
     const transactionId = transactionResult.lastID
 
@@ -37,6 +51,13 @@ export async function POST(request: NextRequest) {
       await db.run(`
         UPDATE products SET stock = stock - ? WHERE id = ?
       `, [item.quantity, item.productId])
+    }
+
+    // Update discount code usage if discount was applied
+    if (discountCode) {
+      await db.run(`
+        UPDATE discount_codes SET currentUses = currentUses + 1 WHERE id = ?
+      `, [discountCode.id])
     }
 
     // Get the created transaction with items

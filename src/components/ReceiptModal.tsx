@@ -20,10 +20,18 @@ interface ReceiptProps {
     items: ReceiptItem[]
     subtotal: number
     tax: number
+    discount: number
     total: number
     paymentMethod: string
     cashier: string
     timestamp: string
+    amountPaid?: number
+    changeAmount?: number
+    discountCode?: {
+      code: string
+      name: string
+      discountAmount: number
+    }
   }
 }
 
@@ -76,10 +84,14 @@ ${receiptData.items.map(item =>
 
 ===============
 Subtotal: $${receiptData.subtotal.toFixed(2)}
-Tax: $${receiptData.tax.toFixed(2)}
+Tax: $${receiptData.tax.toFixed(2)}${receiptData.discountCode ? `
+Discount (${receiptData.discountCode.name}): -$${receiptData.discount.toFixed(2)}` : ''}
 TOTAL: $${receiptData.total.toFixed(2)}
 
 Payment: ${receiptData.paymentMethod}
+${receiptData.paymentMethod === 'CASH' && receiptData.amountPaid ? `
+Amount Paid: $${receiptData.amountPaid.toFixed(2)}
+Change: $${(receiptData.changeAmount || 0).toFixed(2)}` : ''}
 
 Thank you for shopping with us!
 Your order number is: ${receiptData.orderNumber}
@@ -162,6 +174,12 @@ Your order number is: ${receiptData.orderNumber}
                 <span>Tax:</span>
                 <span>${receiptData.tax.toFixed(2)}</span>
               </div>
+              {receiptData.discountCode && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount ({receiptData.discountCode.name}):</span>
+                  <span>-${receiptData.discount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="total-row flex justify-between font-bold text-base">
                 <span>TOTAL:</span>
                 <span>${receiptData.total.toFixed(2)}</span>
@@ -170,6 +188,18 @@ Your order number is: ${receiptData.orderNumber}
                 <span>Payment:</span>
                 <span>{receiptData.paymentMethod}</span>
               </div>
+              {receiptData.paymentMethod === 'CASH' && receiptData.amountPaid && (
+                <>
+                  <div className="flex justify-between text-xs">
+                    <span>Amount Paid:</span>
+                    <span>${receiptData.amountPaid.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-bold">
+                    <span>Change:</span>
+                    <span>${(receiptData.changeAmount || 0).toFixed(2)}</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="footer text-center mt-4 text-xs">
