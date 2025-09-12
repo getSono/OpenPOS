@@ -4,10 +4,14 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/AuthContext'
+import { useMode } from '@/contexts/ModeContext'
 import BarcodeScanner from '@/components/BarcodeScanner'
 import HandheldScanner from '@/components/HandheldScanner'
 import ReceiptModal from '@/components/ReceiptModal'
+import CheckoutModal from '@/components/CheckoutModal'
+import SettingsPage from '@/components/SettingsPage'
 import { 
   ShoppingCart, 
   Search, 
@@ -19,7 +23,11 @@ import {
   Trash2,
   CreditCard,
   Monitor,
-  Smartphone
+  Smartphone,
+  Settings,
+  ChefHat,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react'
 
 interface Product {
@@ -38,6 +46,7 @@ interface CartItem {
 
 export default function POSInterface() {
   const { user, logout } = useAuth()
+  const { mode, toggleMode } = useMode()
   const [products, setProducts] = useState<Product[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -45,6 +54,8 @@ export default function POSInterface() {
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
   const [showHandheldScanner, setShowHandheldScanner] = useState(false)
   const [showReceipt, setShowReceipt] = useState(false)
+  const [showCheckout, setShowCheckout] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [receiptData, setReceiptData] = useState<{
     receiptNumber: string;
     orderNumber: number;
@@ -60,6 +71,8 @@ export default function POSInterface() {
     paymentMethod: string;
     cashier: string;
     timestamp: string;
+    amountPaid?: number;
+    changeAmount?: number;
   } | null>(null)
 
   useEffect(() => {
@@ -185,7 +198,11 @@ export default function POSInterface() {
     window.open('/customer-display', '_blank', 'width=1200,height=800')
   }
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (paymentData: {
+    paymentMethod: 'CASH' | 'PAYPAL'
+    amountPaid?: number
+    changeAmount?: number
+  }) => {
     if (cart.length === 0) return
 
     try {
@@ -199,6 +216,9 @@ export default function POSInterface() {
             unitPrice: item.product.price,
           })),
           total: calculateTotal(),
+          paymentMethod: paymentData.paymentMethod,
+          amountPaid: paymentData.amountPaid,
+          changeAmount: paymentData.changeAmount,
         }),
       })
 
@@ -218,13 +238,16 @@ export default function POSInterface() {
           subtotal: calculateTotal(),
           tax: 0,
           total: calculateTotal(),
-          paymentMethod: 'CASH',
+          paymentMethod: paymentData.paymentMethod,
           cashier: user?.name || 'Unknown',
           timestamp: new Date().toLocaleString(),
+          amountPaid: paymentData.amountPaid,
+          changeAmount: paymentData.changeAmount,
         }
         
         setReceiptData(receipt)
         setShowReceipt(true)
+        setShowCheckout(false)
         clearCart()
       }
     } catch (error) {
@@ -233,16 +256,40 @@ export default function POSInterface() {
     }
   }
 
+  const openCheckout = () => {
+    if (cart.length === 0) return
+    setShowCheckout(true)
+  }
+
+  if (showSettings) {
+    return <SettingsPage onBack={() => setShowSettings(false)} />
+  }
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="bg-white shadow-sm border-b px-6 py-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">OpenPOS</h1>
-            <p className="text-sm text-gray-600">Point of Sale System</p>
+          <div className="flex items-center space-x-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">OpenPOS</h1>
+              <p className="text-sm text-gray-600">Point of Sale System</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant={mode === 'kitchen' ? 'default' : 'outline'}>
+                {mode === 'kitchen' ? <ChefHat className="w-3 h-3 mr-1" /> : null}
+                {mode === 'kitchen' ? 'Kitchen Mode' : 'Normal Mode'}
+              </Badge>
+              <Button variant="outline" size="sm" onClick={toggleMode}>
+                {mode === 'normal' ? <ToggleLeft className="w-4 h-4" /> : <ToggleRight className="w-4 h-4" />}
+              </Button>
+            </div>
           </div>
           <div className="flex items-center space-x-4">
+            <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </Button>
             <Button variant="outline" size="sm" onClick={openCustomerDisplay}>
               <Monitor className="w-4 h-4 mr-2" />
               Customer Display
@@ -255,14 +302,16 @@ export default function POSInterface() {
               <Smartphone className="w-4 h-4 mr-2" />
               Handheld
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => window.open('/worker', '_blank')}
-            >
-              <User className="w-4 h-4 mr-2" />
-              Worker Station
-            </Button>
+            {mode === 'kitchen' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.open('/worker', '_blank')}
+              >
+                <User className="w-4 h-4 mr-2" />
+                Worker Station
+              </Button>
+            )}
             <Button 
               variant="outline" 
               size="sm" 
@@ -421,7 +470,7 @@ export default function POSInterface() {
                 <Button 
                   className="w-full" 
                   size="lg"
-                  onClick={handleCheckout}
+                  onClick={openCheckout}
                 >
                   <CreditCard className="w-4 h-4 mr-2" />
                   Checkout
@@ -460,6 +509,15 @@ export default function POSInterface() {
         isOpen={showReceipt}
         onClose={() => setShowReceipt(false)}
         receiptData={receiptData || undefined}
+      />
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        isOpen={showCheckout}
+        onClose={() => setShowCheckout(false)}
+        cart={cart}
+        total={calculateTotal()}
+        onCheckout={handleCheckout}
       />
     </div>
   )

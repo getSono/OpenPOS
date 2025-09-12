@@ -24,6 +24,8 @@ interface ReceiptProps {
     paymentMethod: string
     cashier: string
     timestamp: string
+    amountPaid?: number
+    changeAmount?: number
   }
 }
 
@@ -80,6 +82,9 @@ Tax: $${receiptData.tax.toFixed(2)}
 TOTAL: $${receiptData.total.toFixed(2)}
 
 Payment: ${receiptData.paymentMethod}
+${receiptData.paymentMethod === 'CASH' && receiptData.amountPaid ? `
+Amount Paid: $${receiptData.amountPaid.toFixed(2)}
+Change: $${(receiptData.changeAmount || 0).toFixed(2)}` : ''}
 
 Thank you for shopping with us!
 Your order number is: ${receiptData.orderNumber}
@@ -170,6 +175,18 @@ Your order number is: ${receiptData.orderNumber}
                 <span>Payment:</span>
                 <span>{receiptData.paymentMethod}</span>
               </div>
+              {receiptData.paymentMethod === 'CASH' && receiptData.amountPaid && (
+                <>
+                  <div className="flex justify-between text-xs">
+                    <span>Amount Paid:</span>
+                    <span>${receiptData.amountPaid.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-bold">
+                    <span>Change:</span>
+                    <span>${(receiptData.changeAmount || 0).toFixed(2)}</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="footer text-center mt-4 text-xs">

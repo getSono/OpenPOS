@@ -3,7 +3,14 @@ import { db } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
-    const { items, total, customerId, paymentMethod = 'CASH' } = await request.json()
+    const { 
+      items, 
+      total, 
+      customerId, 
+      paymentMethod = 'CASH',
+      amountPaid,
+      changeAmount 
+    } = await request.json()
 
     // Generate receipt number and order number
     const receiptNumber = `RCP-${Date.now()}-${Math.floor(Math.random() * 1000)}`
@@ -18,11 +25,17 @@ export async function POST(request: NextRequest) {
     const tax = 0
     const discount = 0
 
-    // Insert transaction
+    // Insert transaction with enhanced fields
     const transactionResult = await db.run(`
-      INSERT INTO transactions (receiptNumber, orderNumber, subtotal, tax, discount, total, paymentMethod, orderStatus, userId, customerId)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [receiptNumber, orderNumber, subtotal, tax, discount, total, paymentMethod, 'PENDING', 'user1', customerId])
+      INSERT INTO transactions (
+        receiptNumber, orderNumber, subtotal, tax, discount, total, 
+        paymentMethod, orderStatus, userId, customerId, amountPaid, changeAmount
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      receiptNumber, orderNumber, subtotal, tax, discount, total, 
+      paymentMethod, 'PENDING', 'user1', customerId, amountPaid, changeAmount
+    ])
 
     const transactionId = transactionResult.lastID
 
