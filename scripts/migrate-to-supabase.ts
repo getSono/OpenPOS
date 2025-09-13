@@ -21,6 +21,113 @@ interface MigrationStats {
   transactionItems: number
 }
 
+// Type definitions for SQLite records
+interface SQLiteCategory {
+  id: string
+  name: string
+  description: string | null
+  color: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface SQLiteUser {
+  id: string
+  name: string
+  pin: string
+  nfcCode: string | null
+  role: string
+  isActive: number
+  createdAt: string
+  updatedAt: string
+}
+
+interface SQLiteWorker {
+  id: string
+  name: string
+  pin: string
+  nfcCode: string | null
+  isActive: number
+  currentStation: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface SQLiteCustomer {
+  id: string
+  name: string | null
+  email: string | null
+  phone: string | null
+  address: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface SQLiteDiscountCode {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  type: string
+  value: number
+  minAmount: number | null
+  maxUses: number | null
+  currentUses: number
+  isActive: number
+  validFrom: string
+  validUntil: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface SQLiteProduct {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  cost: number | null
+  sku: string | null
+  barcode: string | null
+  stock: number
+  minStock: number
+  isActive: number
+  image: string | null
+  categoryId: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface SQLiteTransaction {
+  id: string
+  receiptNumber: string
+  orderNumber: number
+  subtotal: number
+  tax: number
+  discount: number
+  total: number
+  amountPaid: number | null
+  changeAmount: number | null
+  paymentMethod: string
+  status: string
+  orderStatus: string
+  notes: string | null
+  userId: string
+  customerId: string | null
+  workerId: string | null
+  discountCodeId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface SQLiteTransactionItem {
+  id: string
+  quantity: number
+  unitPrice: number
+  totalPrice: number
+  transactionId: string
+  productId: string
+}
+
 async function checkSQLiteDatabase(): Promise<boolean> {
   try {
     const result = await sqliteGet("SELECT name FROM sqlite_master WHERE type='table'")
@@ -33,7 +140,7 @@ async function checkSQLiteDatabase(): Promise<boolean> {
 
 async function migrateCategories(): Promise<number> {
   console.log('Migrating categories...')
-  const categories = await sqliteAll('SELECT * FROM categories ORDER BY createdAt')
+  const categories = await sqliteAll('SELECT * FROM categories ORDER BY createdAt') as SQLiteCategory[]
   
   let count = 0
   for (const category of categories) {
@@ -68,7 +175,7 @@ async function migrateCategories(): Promise<number> {
 
 async function migrateUsers(): Promise<number> {
   console.log('Migrating users...')
-  const users = await sqliteAll('SELECT * FROM users ORDER BY createdAt')
+  const users = await sqliteAll('SELECT * FROM users ORDER BY createdAt') as SQLiteUser[]
   
   let count = 0
   for (const user of users) {
@@ -107,7 +214,7 @@ async function migrateUsers(): Promise<number> {
 
 async function migrateWorkers(): Promise<number> {
   console.log('Migrating workers...')
-  const workers = await sqliteAll('SELECT * FROM workers ORDER BY createdAt')
+  const workers = await sqliteAll('SELECT * FROM workers ORDER BY createdAt') as SQLiteWorker[]
   
   let count = 0
   for (const worker of workers) {
@@ -146,7 +253,7 @@ async function migrateWorkers(): Promise<number> {
 
 async function migrateCustomers(): Promise<number> {
   console.log('Migrating customers...')
-  const customers = await sqliteAll('SELECT * FROM customers ORDER BY createdAt')
+  const customers = await sqliteAll('SELECT * FROM customers ORDER BY createdAt') as SQLiteCustomer[]
   
   let count = 0
   for (const customer of customers) {
@@ -183,7 +290,7 @@ async function migrateCustomers(): Promise<number> {
 
 async function migrateDiscountCodes(): Promise<number> {
   console.log('Migrating discount codes...')
-  const discountCodes = await sqliteAll('SELECT * FROM discount_codes ORDER BY createdAt')
+  const discountCodes = await sqliteAll('SELECT * FROM discount_codes ORDER BY createdAt') as SQLiteDiscountCode[]
   
   let count = 0
   for (const discountCode of discountCodes) {
@@ -234,7 +341,7 @@ async function migrateDiscountCodes(): Promise<number> {
 
 async function migrateProducts(): Promise<number> {
   console.log('Migrating products...')
-  const products = await sqliteAll('SELECT * FROM products ORDER BY createdAt')
+  const products = await sqliteAll('SELECT * FROM products ORDER BY createdAt') as SQLiteProduct[]
   
   let count = 0
   for (const product of products) {
@@ -285,7 +392,7 @@ async function migrateProducts(): Promise<number> {
 
 async function migrateTransactions(): Promise<number> {
   console.log('Migrating transactions...')
-  const transactions = await sqliteAll('SELECT * FROM transactions ORDER BY createdAt')
+  const transactions = await sqliteAll('SELECT * FROM transactions ORDER BY createdAt') as SQLiteTransaction[]
   
   let count = 0
   for (const transaction of transactions) {
@@ -346,7 +453,7 @@ async function migrateTransactions(): Promise<number> {
 
 async function migrateTransactionItems(): Promise<number> {
   console.log('Migrating transaction items...')
-  const transactionItems = await sqliteAll('SELECT * FROM transaction_items')
+  const transactionItems = await sqliteAll('SELECT * FROM transaction_items') as SQLiteTransactionItem[]
   
   let count = 0
   for (const item of transactionItems) {

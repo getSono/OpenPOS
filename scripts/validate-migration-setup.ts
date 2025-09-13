@@ -20,6 +20,14 @@ interface ValidationResult {
   info: string[]
 }
 
+interface SQLiteTable {
+  name: string
+}
+
+interface SQLiteCount {
+  count: number
+}
+
 async function validateEnvironmentVariables(): Promise<Partial<ValidationResult>> {
   const errors: string[] = []
   const warnings: string[] = []
@@ -68,8 +76,8 @@ async function validateSQLiteDatabase(): Promise<Partial<ValidationResult>> {
     const all = promisify(db.all.bind(db))
 
     // Check if tables exist
-    const tables = await all("SELECT name FROM sqlite_master WHERE type='table'")
-    const tableNames = tables.map((t: any) => t.name)
+    const tables = await all("SELECT name FROM sqlite_master WHERE type='table'") as SQLiteTable[]
+    const tableNames = tables.map(t => t.name)
     
     const expectedTables = [
       'users', 'workers', 'categories', 'products', 
@@ -87,7 +95,7 @@ async function validateSQLiteDatabase(): Promise<Partial<ValidationResult>> {
     const dataCounts: Record<string, number> = {}
     for (const table of expectedTables) {
       if (tableNames.includes(table)) {
-        const result = await all(`SELECT COUNT(*) as count FROM ${table}`)
+        const result = await all(`SELECT COUNT(*) as count FROM ${table}`) as SQLiteCount[]
         dataCounts[table] = result[0].count
       }
     }
