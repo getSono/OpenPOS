@@ -289,9 +289,9 @@ export default function POSInterface() {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex flex-col">
-      {/* Header */}
-      <header className="bg-white/90 backdrop-blur-lg shadow-xl border-b border-white/50 px-3 sm:px-6 py-3 sm:py-4">
+    <div className="h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex flex-col overflow-hidden">
+      {/* Header - Fixed */}
+      <header className="flex-shrink-0 bg-white/90 backdrop-blur-lg shadow-xl border-b border-white/50 px-3 sm:px-6 py-3 sm:py-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto">
             <div className="flex items-center space-x-2 sm:space-x-3">
@@ -315,14 +315,14 @@ export default function POSInterface() {
           </div>
           
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-2 xl:space-x-4">
+          <div className="hidden lg:flex items-center space-x-2 xl:space-x-3">
             <Button variant="outline" size="sm" onClick={() => setShowSettings(true)} className="hover:bg-purple-50">
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
+              <Settings className="w-4 h-4 mr-1" />
+              <span className="hidden xl:inline">Settings</span>
             </Button>
             <Button variant="outline" size="sm" onClick={openCustomerDisplay} className="hover:bg-blue-50">
-              <Monitor className="w-4 h-4 mr-2" />
-              Customer Display
+              <Monitor className="w-4 h-4 mr-1" />
+              <span className="hidden xl:inline">Customer</span>
             </Button>
             <Button 
               variant="outline" 
@@ -330,8 +330,8 @@ export default function POSInterface() {
               onClick={() => window.open('/handheld', '_blank')}
               className="hover:bg-indigo-50"
             >
-              <Smartphone className="w-4 h-4 mr-2" />
-              Handheld
+              <Smartphone className="w-4 h-4 mr-1" />
+              <span className="hidden xl:inline">Handheld</span>
             </Button>
             {mode === 'kitchen' && (
               <Button 
@@ -340,8 +340,8 @@ export default function POSInterface() {
                 onClick={() => window.open('/worker', '_blank')}
                 className="hover:bg-green-50"
               >
-                <User className="w-4 h-4 mr-2" />
-                Worker Station
+                <User className="w-4 h-4 mr-1" />
+                <span className="hidden xl:inline">Worker</span>
               </Button>
             )}
             <Button 
@@ -350,14 +350,14 @@ export default function POSInterface() {
               onClick={() => window.open('/order-display', '_blank')}
               className="hover:bg-red-50"
             >
-              <Monitor className="w-4 h-4 mr-2" />
-              Order Display
+              <Monitor className="w-4 h-4 mr-1" />
+              <span className="hidden xl:inline">Orders</span>
             </Button>
-            <div className="flex items-center space-x-3 px-4 py-2 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200/50">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
+            <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200/50">
+              <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <User className="w-3 h-3 text-white" />
               </div>
-              <div>
+              <div className="hidden xl:block">
                 <span className="text-sm font-semibold text-gray-800">{user?.name}</span>
                 <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full ml-2 font-medium">
                   {user?.role}
@@ -365,8 +365,7 @@ export default function POSInterface() {
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={logout} className="hover:bg-red-50 text-red-600 border-red-200">
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
 
@@ -416,10 +415,12 @@ export default function POSInterface() {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row">
-        {/* Products Section */}
-        <div className="flex-1 p-3 sm:p-6">
-          <div className="mb-4 sm:mb-6">
+      {/* Main Content - Flexible */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Products Section - Scrollable */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Search Header - Fixed */}
+          <div className="flex-shrink-0 p-3 sm:p-6 pb-2 sm:pb-3">
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-3 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
@@ -443,43 +444,47 @@ export default function POSInterface() {
             </div>
           </div>
 
-          {loading ? (
-            <div className="text-center py-12 sm:py-16">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-4 sm:mb-6 animate-pulse">
-                <ShoppingCart className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+          {/* Products Grid - Scrollable */}
+          <div className="flex-1 overflow-y-auto px-3 sm:px-6 pb-3 sm:pb-6">
+            {loading ? (
+              <div className="text-center py-12 sm:py-16">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-4 sm:mb-6 animate-pulse">
+                  <ShoppingCart className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                </div>
+                <p className="text-gray-500 font-medium text-sm sm:text-base">Loading products...</p>
               </div>
-              <p className="text-gray-500 font-medium text-sm sm:text-base">Loading products...</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-6">
-              {filteredProducts.map((product) => (
-                <Card
-                  key={product.id}
-                  className="cursor-pointer hover:shadow-2xl transition-all duration-300 hover:scale-105 bg-white/90 backdrop-blur-lg border-0 shadow-xl group"
-                  onClick={() => addToCart(product)}
-                >
-                  <CardContent className="p-3 sm:p-6">
-                    <div className="aspect-square bg-gradient-to-br from-gray-50 to-purple-50 rounded-xl sm:rounded-2xl mb-2 sm:mb-4 flex items-center justify-center group-hover:from-purple-50 group-hover:to-blue-50 transition-all duration-300">
-                      <span className="text-gray-400 text-xs sm:text-sm font-medium">No Image</span>
-                    </div>
-                    <h3 className="font-semibold text-gray-800 mb-1 sm:mb-2 group-hover:text-purple-700 transition-colors text-sm sm:text-base">{product.name}</h3>
-                    <p className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
-                      ${product.price.toFixed(2)}
-                    </p>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-500 bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full">Stock: {product.stock}</span>
-                      <span className="text-purple-600 bg-purple-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium">{product.category.name}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+                {filteredProducts.map((product) => (
+                  <Card
+                    key={product.id}
+                    className="cursor-pointer hover:shadow-2xl transition-all duration-300 hover:scale-105 bg-white/90 backdrop-blur-lg border-0 shadow-xl group"
+                    onClick={() => addToCart(product)}
+                  >
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="aspect-square bg-gradient-to-br from-gray-50 to-purple-50 rounded-xl mb-2 sm:mb-3 flex items-center justify-center group-hover:from-purple-50 group-hover:to-blue-50 transition-all duration-300">
+                        <span className="text-gray-400 text-xs sm:text-sm font-medium">No Image</span>
+                      </div>
+                      <h3 className="font-semibold text-gray-800 mb-1 sm:mb-2 group-hover:text-purple-700 transition-colors text-sm sm:text-base line-clamp-2">{product.name}</h3>
+                      <p className="text-lg sm:text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+                        ${product.price.toFixed(2)}
+                      </p>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">Stock: {product.stock}</span>
+                        <span className="text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-full font-medium line-clamp-1">{product.category.name}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Cart Section */}
-        <div className="w-full lg:w-96 bg-white/90 backdrop-blur-lg border-t lg:border-t-0 lg:border-l border-white/50 shadow-2xl">
-          <div className="p-3 sm:p-6 border-b border-gray-200/50">
+        {/* Cart Section - Fixed */}
+        <div className="w-full lg:w-80 xl:w-96 bg-white/90 backdrop-blur-lg border-t lg:border-t-0 lg:border-l border-white/50 shadow-2xl flex flex-col">
+          {/* Cart Header - Fixed */}
+          <div className="flex-shrink-0 p-3 sm:p-6 border-b border-gray-200/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2 sm:space-x-3">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center">
@@ -495,7 +500,8 @@ export default function POSInterface() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto max-h-64 sm:max-h-96">
+          {/* Cart Items - Scrollable */}
+          <div className="flex-1 overflow-y-auto">
             {cart.length === 0 ? (
               <div className="p-4 sm:p-8 text-center text-gray-500">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
@@ -509,7 +515,7 @@ export default function POSInterface() {
                 {cart.map((item) => (
                   <div key={item.product.id} className="bg-gradient-to-r from-gray-50 to-purple-50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-purple-100/50 hover:shadow-md transition-all duration-200">
                     <div className="flex items-center justify-between mb-2 sm:mb-3">
-                      <h3 className="font-semibold text-gray-800 text-xs sm:text-sm pr-2">{item.product.name}</h3>
+                      <h3 className="font-semibold text-gray-800 text-xs sm:text-sm pr-2 line-clamp-2 flex-1">{item.product.name}</h3>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -554,8 +560,9 @@ export default function POSInterface() {
             )}
           </div>
 
+          {/* Cart Checkout - Fixed */}
           {cart.length > 0 && (
-            <div className="border-t border-gray-200/50 p-3 sm:p-6 space-y-3 sm:space-y-6 bg-gradient-to-br from-purple-50/50 to-blue-50/50">
+            <div className="flex-shrink-0 border-t border-gray-200/50 p-3 sm:p-6 space-y-3 sm:space-y-6 bg-gradient-to-br from-purple-50/50 to-blue-50/50">
               <div className="space-y-2 sm:space-y-3">
                 <div className="flex justify-between text-lg sm:text-2xl font-bold">
                   <span className="text-gray-800">Total:</span>
