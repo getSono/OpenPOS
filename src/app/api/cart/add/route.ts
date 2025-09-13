@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import CartService from '@/lib/cartService'
 
 export async function POST(request: NextRequest) {
   try {
-    const { productId, quantity } = await request.json()
+    const { productId, quantity, product } = await request.json()
 
-    if (!productId || !quantity) {
+    if (!productId) {
       return NextResponse.json(
-        { error: 'Product ID and quantity are required' },
+        { error: 'Product ID is required' },
         { status: 400 }
       )
     }
 
-    // For the handheld scanner, we'll just return success
-    // In a real application, this would add to a session-based cart
-    // or user-specific cart in the database
-    
+    const cartService = CartService.getInstance()
+    cartService.addItem(productId, quantity || 1, product)
+
     return NextResponse.json({ 
       success: true, 
       message: 'Item added to cart successfully' 

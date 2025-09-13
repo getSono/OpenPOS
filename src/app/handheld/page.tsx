@@ -31,6 +31,7 @@ export default function HandheldPage() {
   const [scannedProducts, setScannedProducts] = useState<Product[]>([])
   const [isConnected, setIsConnected] = useState(false)
   const [scanning, setScanning] = useState(false)
+  const [nfcScanning, setNfcScanning] = useState(false)
   const [lastAction, setLastAction] = useState('')
 
   // Simulate device connection
@@ -86,11 +87,15 @@ export default function HandheldPage() {
         setScannedProducts(prev => [product, ...prev.slice(0, 9)]) // Keep last 10
         setLastAction(`Scanned: ${product.name}`)
         
-        // Add to main POS cart if needed
+        // Add to main POS cart with complete product data
         await fetch('/api/cart/add', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId: product.id, quantity: 1 })
+          body: JSON.stringify({ 
+            productId: product.id, 
+            quantity: 1,
+            product: product
+          })
         })
       } else {
         setLastAction('Product not found')
@@ -101,6 +106,78 @@ export default function HandheldPage() {
     
     setBarcodeInput('')
     setScanning(false)
+  }
+
+  const handleNFCProductScan = async () => {
+    if (!nfcInput) return
+
+    setNfcScanning(true)
+    try {
+      // For demo purposes, we'll use the NFC code as a product lookup
+      // In reality, NFC tags would contain product information or IDs
+      const productId = nfcInput.replace('NFC', 'PROD') // Convert NFC001 to PROD001 etc.
+      
+      const response = await fetch(`/api/products/barcode/${productId}`)
+      
+      if (response.ok) {
+        const product = await response.json()
+        setScannedProducts(prev => [product, ...prev.slice(0, 9)]) // Keep last 10
+        setLastAction(`NFC Scanned: ${product.name}`)
+        
+        // Add to main POS cart with complete product data
+        await fetch('/api/cart/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            productId: product.id, 
+            quantity: 1,
+            product: product
+          })
+        })
+      } else {
+        // If no product found, try to find a matching product by name
+        setLastAction('NFC tag scanned - no matching product found')
+      }
+    } catch (error) {
+      setLastAction('NFC scan error')
+    }
+    
+    setNfcInput('')
+    setNfcScanning(false)
+  }
+
+  const startNFCScanning = async () => {
+    if ('NDEFReader' in window) {
+      try {
+        setNfcScanning(true)
+        // @ts-expect-error - NDEFReader is not fully typed in TypeScript yet
+        const ndef = new NDEFReader()
+        await ndef.scan()
+        
+        ndef.addEventListener('reading', ({ message }: { message: { records: Array<{ recordType: string; data: ArrayBuffer }> } }) => {
+          const decoder = new TextDecoder()
+          for (const record of message.records) {
+            if (record.recordType === 'text') {
+              const nfcCode = decoder.decode(record.data)
+              setNfcInput(nfcCode)
+              handleNFCProductScan()
+              return
+            }
+          }
+        })
+        
+        ndef.addEventListener('readingerror', () => {
+          setLastAction('NFC reading error occurred')
+          setNfcScanning(false)
+        })
+        
+      } catch (error) {
+        setLastAction('Failed to start NFC scanning')
+        setNfcScanning(false)
+      }
+    } else {
+      setLastAction('NFC not supported on this device')
+    }
   }
 
   const handleLogout = () => {
@@ -261,18 +338,54 @@ export default function HandheldPage() {
                       <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
                         <Wifi className="h-5 w-5 text-white" />
                       </div>
-                      <span>NFC Scanner</span>
+                      <span>NFC Product Scanner</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="text-center py-8">
-                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
-                        <Wifi className="h-8 w-8 text-white" />
+                    <div className="space-y-3">
+                      <div className="flex space-x-3">
+                        <Input
+                          value={nfcInput}
+                          onChange={(e) => setNfcInput(e.target.value)}
+                          placeholder="Tap NFC tag or enter code"
+                          className="bg-white/20 border-white/30 text-white placeholder:text-gray-300 focus:border-white/50"
+                          disabled={nfcScanning}
+                        />
+                        <Button 
+                          onClick={handleNFCProductScan} 
+                          disabled={!nfcInput || nfcScanning}
+                          size="lg"
+                          className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-6"
+                        >
+                          {nfcScanning ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Scan...
+                            </>
+                          ) : (
+                            'Scan'
+                          )}
+                        </Button>
                       </div>
-                      <p className="text-gray-200 font-medium">Ready to scan NFC tags</p>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Bring NFC tag close to device
-                      </p>
+                      
+                      <div className="text-center">
+                        <p className="text-gray-300 text-sm mb-3">Or use hardware NFC scanner</p>
+                        <Button 
+                          onClick={startNFCScanning}
+                          variant="outline"
+                          className="border-white/30 text-white hover:bg-white/20"
+                          disabled={nfcScanning}
+                        >
+                          <Wifi className="w-4 h-4 mr-2" />
+                          {nfcScanning ? 'Scanning...' : 'Start NFC Scan'}
+                        </Button>
+                      </div>
+                      
+                      <div className="p-3 rounded-lg bg-green-500/20 border border-green-400/30">
+                        <p className="text-xs text-green-200">
+                          Test NFC codes: NFC001, NFC002, NFC003
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

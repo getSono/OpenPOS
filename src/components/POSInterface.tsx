@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMode } from '@/contexts/ModeContext'
+import { useCartSync } from '@/hooks/useCartSync'
 import BarcodeScanner from '@/components/BarcodeScanner'
 import HandheldScanner from '@/components/HandheldScanner'
 import ReceiptModal from '@/components/ReceiptModal'
@@ -27,7 +28,8 @@ import {
   Settings,
   ChefHat,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Wifi
 } from 'lucide-react'
 
 interface Product {
@@ -47,6 +49,7 @@ interface CartItem {
 export default function POSInterface() {
   const { user, logout } = useAuth()
   const { mode, toggleMode } = useMode()
+  const { isConnected: handheldConnected, externalCart, syncCartAction } = useCartSync()
   const [products, setProducts] = useState<Product[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -85,6 +88,26 @@ export default function POSInterface() {
     fetchProducts()
   }, [])
 
+  // Sync external cart changes (from handheld scanner) with local cart
+  useEffect(() => {
+    if (externalCart.length > 0) {
+      const mappedCart = externalCart.map(item => ({
+        product: item.product || products.find(p => p.id === item.productId),
+        quantity: item.quantity
+      })).filter(item => item.product) as CartItem[]
+      
+      if (mappedCart.length !== cart.length || 
+          mappedCart.some((item, index) => 
+            !cart[index] || 
+            cart[index].product.id !== item.product.id || 
+            cart[index].quantity !== item.quantity
+          )) {
+        setCart(mappedCart)
+        updateCustomerDisplay(mappedCart)
+      }
+    }
+  }, [externalCart, products])
+
   const fetchProducts = async () => {
     try {
       const response = await fetch('/api/products')
@@ -105,6 +128,9 @@ export default function POSInterface() {
   )
 
   const addToCart = (product: Product) => {
+    // Sync to external cart system first
+    syncCartAction('add', product.id, 1, product)
+    
     setCart(prev => {
       const existingItem = prev.find(item => item.product.id === product.id)
       let newCart
@@ -129,6 +155,10 @@ export default function POSInterface() {
       removeFromCart(productId)
       return
     }
+    
+    // Sync to external cart system
+    syncCartAction('update', productId, quantity)
+    
     setCart(prev => {
       const newCart = prev.map(item =>
         item.product.id === productId ? { ...item, quantity } : item
@@ -139,6 +169,9 @@ export default function POSInterface() {
   }
 
   const removeFromCart = (productId: string) => {
+    // Sync to external cart system
+    syncCartAction('remove', productId)
+    
     setCart(prev => {
       const newCart = prev.filter(item => item.product.id !== productId)
       updateCustomerDisplay(newCart)
@@ -147,6 +180,9 @@ export default function POSInterface() {
   }
 
   const clearCart = () => {
+    // Sync to external cart system
+    syncCartAction('clear')
+    
     setCart([])
     updateCustomerDisplay([])
   }
@@ -326,10 +362,15 @@ export default function POSInterface() {
               variant="outline" 
               size="sm" 
               onClick={() => window.open('/handheld', '_blank')}
-              className="hover:bg-indigo-50"
+              className="hover:bg-indigo-50 relative"
             >
               <Smartphone className="w-4 h-4 mr-2" />
               Handheld
+              {handheldConnected && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                  <Wifi className="w-2 h-2 text-white" />
+                </div>
+              )}
             </Button>
             {mode === 'kitchen' && (
               <Button 
