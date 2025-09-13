@@ -78,14 +78,15 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
         setProducts(productsData)
       }
 
-      // For now, we'll use mock data for users and discount codes
-      // since the API endpoints don't exist yet
-      setUsers([
-        { id: '1', name: 'Admin User', role: 'ADMIN', isActive: true, nfcCode: 'NFC001' },
-        { id: '2', name: 'Cashier 1', role: 'CASHIER', isActive: true },
-        { id: '3', name: 'Manager', role: 'MANAGER', isActive: true, nfcCode: 'NFC002' },
-      ])
+      // Fetch users
+      const usersResponse = await fetch('/api/users')
+      if (usersResponse.ok) {
+        const usersData = await usersResponse.json()
+        setUsers(usersData)
+      }
 
+      // For now, we'll use mock data for discount codes
+      // since the API endpoints don't exist yet
       setDiscountCodes([
         { id: '1', code: 'SAVE10', name: '10% Off', type: 'PERCENTAGE', value: 10, isActive: true, maxUses: 100, currentUses: 5 },
         { id: '2', code: 'WELCOME5', name: 'Welcome $5 Off', type: 'FIXED_AMOUNT', value: 5, isActive: true, maxUses: 50, currentUses: 12 },
@@ -106,6 +107,52 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   const handleDeleteProduct = async (id: string) => {
     // TODO: Implement product delete API call
     console.log('Deleting product:', id)
+  }
+
+  const handleSaveUser = async (user: Partial<User & { pin: string }>) => {
+    try {
+      const method = editingUser?.id ? 'PUT' : 'POST'
+      const url = editingUser?.id ? `/api/users/${editingUser.id}` : '/api/users'
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user),
+      })
+
+      if (response.ok) {
+        await fetchData() // Refresh the user list
+        setEditingUser(null)
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error saving user:', error)
+      alert('Failed to save user')
+    }
+  }
+
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/users/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        await fetchData() // Refresh the user list
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      alert('Failed to delete user')
+    }
   }
 
   const ProductForm = ({ product, onSave, onCancel }: { 
@@ -161,6 +208,92 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
               onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
             />
           </div>
+          <div className="flex space-x-2">
+            <Button onClick={() => onSave(formData)}>
+              <Save className="w-4 h-4 mr-2" />
+              Save
+            </Button>
+            <Button variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const UserForm = ({ user, onSave, onCancel }: { 
+    user?: User | null, 
+    onSave: (user: Partial<User & { pin: string }>) => void,
+    onCancel: () => void 
+  }) => {
+    const [formData, setFormData] = useState({
+      name: user?.name || '',
+      pin: '',
+      role: user?.role || 'CASHIER',
+      nfcCode: user?.nfcCode || '',
+      isActive: user?.isActive ?? true,
+    })
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{user ? 'Edit User' : 'Add User'}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="userName">Name</Label>
+            <Input
+              id="userName"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Enter user name"
+            />
+          </div>
+          <div>
+            <Label htmlFor="userPin">PIN {user ? '(leave empty to keep current)' : '(4-6 digits)'}</Label>
+            <Input
+              id="userPin"
+              type="password"
+              value={formData.pin}
+              onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+              placeholder={user ? 'Leave empty to keep current PIN' : 'Enter 4-6 digit PIN'}
+              maxLength={6}
+            />
+          </div>
+          <div>
+            <Label htmlFor="userRole">Role</Label>
+            <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ADMIN">Admin</SelectItem>
+                <SelectItem value="MANAGER">Manager</SelectItem>
+                <SelectItem value="CASHIER">Cashier</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="userNfc">NFC Code (optional)</Label>
+            <Input
+              id="userNfc"
+              value={formData.nfcCode}
+              onChange={(e) => setFormData({ ...formData, nfcCode: e.target.value })}
+              placeholder="Enter NFC code"
+            />
+          </div>
+          {user && (
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="userActive"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+              />
+              <Label htmlFor="userActive">Active User</Label>
+            </div>
+          )}
           <div className="flex space-x-2">
             <Button onClick={() => onSave(formData)}>
               <Save className="w-4 h-4 mr-2" />
@@ -379,58 +512,72 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Users</h2>
-              <Button onClick={() => setEditingUser({} as User)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add User
-              </Button>
-            </div>
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>NFC Code</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{user.role}</Badge>
-                        </TableCell>
-                        <TableCell>{user.nfcCode || 'N/A'}</TableCell>
-                        <TableCell>
-                          <Badge variant={user.isActive ? 'default' : 'secondary'}>
-                            {user.isActive ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setEditingUser(user)}
-                            >
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            {editingUser !== null ? (
+              <UserForm 
+                user={editingUser}
+                onSave={handleSaveUser}
+                onCancel={() => setEditingUser(null)}
+              />
+            ) : (
+              <>
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold">Users</h2>
+                  <Button onClick={() => setEditingUser({} as User)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add User
+                  </Button>
+                </div>
+                <Card>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>NFC Code</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">{user.name}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{user.role}</Badge>
+                            </TableCell>
+                            <TableCell>{user.nfcCode || 'N/A'}</TableCell>
+                            <TableCell>
+                              <Badge variant={user.isActive ? 'default' : 'secondary'}>
+                                {user.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => setEditingUser(user)}
+                                >
+                                  <Edit className="w-3 h-3" />
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleDeleteUser(user.id)}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </TabsContent>
 
           {/* Discount Codes Tab */}
