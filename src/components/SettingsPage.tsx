@@ -35,6 +35,31 @@ interface Product {
   minStock: number
   isActive: boolean
   image?: string
+  customFields?: Record<string, any>
+  variants?: ProductVariant[]
+}
+
+interface ProductVariant {
+  id: string
+  productId: string
+  name: string
+  sku?: string
+  barcode?: string
+  price?: number
+  cost?: number
+  stock: number
+  attributes: Record<string, any>
+  isActive: boolean
+}
+
+interface CustomFieldDefinition {
+  id: string
+  name: string
+  label: string
+  type: 'text' | 'number' | 'boolean' | 'date' | 'select'
+  options: string[]
+  isRequired: boolean
+  isActive: boolean
 }
 
 interface Category {
@@ -72,12 +97,15 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   const [users, setUsers] = useState<User[]>([])
   const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState<CustomFieldDefinition[]>([])
   const [loading, setLoading] = useState(true)
 
   // Form states
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [editingDiscount, setEditingDiscount] = useState<DiscountCode | null>(null)
+  const [editingCustomField, setEditingCustomField] = useState<CustomFieldDefinition | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -97,6 +125,13 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
       if (categoriesResponse.ok) {
         const categoriesData = await categoriesResponse.json()
         setCategories(categoriesData)
+      }
+
+      // Fetch custom field definitions
+      const customFieldsResponse = await fetch('/api/custom-fields')
+      if (customFieldsResponse.ok) {
+        const customFieldsData = await customFieldsResponse.json()
+        setCustomFieldDefinitions(customFieldsData)
       }
 
       // For now, we'll use mock data for users and discount codes
@@ -128,7 +163,10 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(productData),
+        body: JSON.stringify({
+          ...productData,
+          customFields: productData.customFields || {}
+        }),
       })
 
       if (response.ok) {
@@ -189,138 +227,235 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
       minStock: product?.minStock || 0,
       categoryId: product?.categoryId || '',
       image: product?.image || '',
+      customFields: product?.customFields || {}
     })
+
+    const handleCustomFieldChange = (fieldName: string, value: any) => {
+      setFormData({
+        ...formData,
+        customFields: {
+          ...formData.customFields,
+          [fieldName]: value
+        }
+      })
+    }
 
     return (
       <Card>
         <CardHeader>
           <CardTitle>{product?.id ? 'Edit Product' : 'Add Product'}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Product name"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="sku">SKU</Label>
-              <Input
-                id="sku"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                placeholder="Stock keeping unit"
-              />
-            </div>
-          </div>
-
+        <CardContent className="space-y-6">
+          {/* Basic Information */}
           <div>
-            <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Product description"
-            />
-          </div>
+            <h4 className="text-sm font-medium mb-3">Basic Information</h4>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Product name"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="sku">SKU</Label>
+                  <Input
+                    id="sku"
+                    value={formData.sku}
+                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                    placeholder="Stock keeping unit"
+                  />
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="price">Price *</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="cost">Cost</Label>
-              <Input
-                id="cost"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.cost}
-                onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="stock">Stock</Label>
-              <Input
-                id="stock"
-                type="number"
-                min="0"
-                value={formData.stock}
-                onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="minStock">Min Stock</Label>
-              <Input
-                id="minStock"
-                type="number"
-                min="0"
-                value={formData.minStock}
-                onChange={(e) => setFormData({ ...formData, minStock: parseInt(e.target.value) || 0 })}
-                placeholder="0"
-              />
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Product description"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Pricing & Inventory */}
+          <div>
+            <h4 className="text-sm font-medium mb-3">Pricing & Inventory</h4>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="price">Price *</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cost">Cost</Label>
+                  <Input
+                    id="cost"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.cost}
+                    onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="stock">Stock</Label>
+                  <Input
+                    id="stock"
+                    type="number"
+                    min="0"
+                    value={formData.stock}
+                    onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="minStock">Min Stock</Label>
+                  <Input
+                    id="minStock"
+                    type="number"
+                    min="0"
+                    value={formData.minStock}
+                    onChange={(e) => setFormData({ ...formData, minStock: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Classification */}
+          <div>
+            <h4 className="text-sm font-medium mb-3">Classification</h4>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="category">Category *</Label>
+                  <Select 
+                    value={formData.categoryId} 
+                    onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="barcode">Barcode</Label>
+                  <Input
+                    id="barcode"
+                    value={formData.barcode}
+                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                    placeholder="Product barcode"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="image">Image URL</Label>
+                <Input
+                  id="image"
+                  value={formData.image}
+                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Custom Fields */}
+          {customFieldDefinitions.length > 0 && (
             <div>
-              <Label htmlFor="category">Category *</Label>
-              <Select 
-                value={formData.categoryId} 
-                onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
+              <h4 className="text-sm font-medium mb-3">Custom Fields</h4>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {customFieldDefinitions.map((field) => (
+                    <div key={field.id}>
+                      <Label htmlFor={field.name}>
+                        {field.label}
+                        {field.isRequired && ' *'}
+                      </Label>
+                      {field.type === 'text' && (
+                        <Input
+                          id={field.name}
+                          value={formData.customFields[field.name] || ''}
+                          onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
+                          required={field.isRequired}
+                        />
+                      )}
+                      {field.type === 'number' && (
+                        <Input
+                          id={field.name}
+                          type="number"
+                          step="0.01"
+                          value={formData.customFields[field.name] || ''}
+                          onChange={(e) => handleCustomFieldChange(field.name, parseFloat(e.target.value) || '')}
+                          required={field.isRequired}
+                        />
+                      )}
+                      {field.type === 'boolean' && (
+                        <div className="flex items-center space-x-2">
+                          <input
+                            id={field.name}
+                            type="checkbox"
+                            checked={formData.customFields[field.name] || false}
+                            onChange={(e) => handleCustomFieldChange(field.name, e.target.checked)}
+                            className="rounded border-gray-300"
+                          />
+                          <Label htmlFor={field.name} className="text-sm">
+                            Yes
+                          </Label>
+                        </div>
+                      )}
+                      {field.type === 'select' && (
+                        <Select 
+                          value={formData.customFields[field.name] || ''} 
+                          onValueChange={(value) => handleCustomFieldChange(field.name, value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {field.options.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="barcode">Barcode</Label>
-              <Input
-                id="barcode"
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                placeholder="Product barcode"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="image">Image URL</Label>
-            <Input
-              id="image"
-              value={formData.image}
-              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-              placeholder="https://example.com/image.jpg"
-            />
-          </div>
+          )}
 
           <div className="flex space-x-2">
             <Button 
@@ -454,7 +589,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
       {/* Content */}
       <div className="p-6">
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Package className="w-4 h-4" />
               Products
@@ -466,6 +601,10 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
             <TabsTrigger value="discounts" className="flex items-center gap-2">
               <Ticket className="w-4 h-4" />
               Discount Codes
+            </TabsTrigger>
+            <TabsTrigger value="custom-fields" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Custom Fields
             </TabsTrigger>
           </TabsList>
 
@@ -666,6 +805,148 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
                                   variant="outline" 
                                   size="sm"
                                   onClick={() => setEditingDiscount(discount)}
+                                >
+                                  <Edit className="w-3 h-3" />
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+
+          {/* Custom Fields Tab */}
+          <TabsContent value="custom-fields" className="space-y-6">
+            {editingCustomField !== null ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>{editingCustomField?.id ? 'Edit Custom Field' : 'Add Custom Field'}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="fieldName">Field Name</Label>
+                      <Input
+                        id="fieldName"
+                        placeholder="e.g., brand, weight, color"
+                        className="lowercase"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="fieldLabel">Display Label</Label>
+                      <Input
+                        id="fieldLabel"
+                        placeholder="e.g., Brand, Weight (kg), Color"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="fieldType">Field Type</Label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select field type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="text">Text</SelectItem>
+                          <SelectItem value="number">Number</SelectItem>
+                          <SelectItem value="boolean">Yes/No</SelectItem>
+                          <SelectItem value="select">Dropdown</SelectItem>
+                          <SelectItem value="date">Date</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="required">Required Field</Label>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <input
+                          id="required"
+                          type="checkbox"
+                          className="rounded border-gray-300"
+                        />
+                        <Label htmlFor="required" className="text-sm">
+                          This field is required
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="options">Options (for dropdown type)</Label>
+                    <Input
+                      id="options"
+                      placeholder="Option 1, Option 2, Option 3"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Separate multiple options with commas
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Field
+                    </Button>
+                    <Button variant="outline" onClick={() => setEditingCustomField(null)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold">Custom Fields</h2>
+                  <Button onClick={() => setEditingCustomField({} as CustomFieldDefinition)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Custom Field
+                  </Button>
+                </div>
+                <Card>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Field Name</TableHead>
+                          <TableHead>Label</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Required</TableHead>
+                          <TableHead>Options</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {customFieldDefinitions.map((field) => (
+                          <TableRow key={field.id}>
+                            <TableCell className="font-mono text-sm">{field.name}</TableCell>
+                            <TableCell className="font-medium">{field.label}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {field.type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {field.isRequired ? (
+                                <Badge variant="destructive">Required</Badge>
+                              ) : (
+                                <Badge variant="secondary">Optional</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-gray-600">
+                              {field.type === 'select' ? field.options.join(', ') : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => setEditingCustomField(field)}
                                 >
                                   <Edit className="w-3 h-3" />
                                 </Button>

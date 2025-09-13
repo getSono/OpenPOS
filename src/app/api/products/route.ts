@@ -12,10 +12,11 @@ export async function GET() {
       ORDER BY p.name ASC
     `)
 
-    // Transform the data to match our interface
-    const formattedProducts = (products as Array<Record<string, unknown> & { categoryName: string }>).map(product => ({
+    // Transform the data to match our interface and parse customFields
+    const formattedProducts = (products as Array<Record<string, unknown> & { categoryName: string; customFields: string }>).map(product => ({
       ...product,
-      category: { name: product.categoryName }
+      category: { name: product.categoryName },
+      customFields: JSON.parse(product.customFields || '{}')
     }))
 
     return NextResponse.json(formattedProducts)
@@ -33,8 +34,8 @@ export async function POST(request: NextRequest) {
     const productId = randomUUID()
     
     await db.run(`
-      INSERT INTO products (id, name, description, price, cost, sku, barcode, stock, minStock, categoryId, image)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO products (id, name, description, price, cost, sku, barcode, stock, minStock, categoryId, image, customFields)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       productId,
       data.name,
@@ -46,7 +47,8 @@ export async function POST(request: NextRequest) {
       parseInt(data.stock) || 0,
       parseInt(data.minStock) || 0,
       data.categoryId,
-      data.image || null
+      data.image || null,
+      JSON.stringify(data.customFields || {})
     ])
 
     // Get the created product with category info
@@ -62,8 +64,9 @@ export async function POST(request: NextRequest) {
     }
 
     const formattedProduct = {
-      ...(product as Record<string, unknown> & { categoryName: string }),
-      category: { name: (product as { categoryName: string }).categoryName }
+      ...(product as Record<string, unknown> & { categoryName: string; customFields: string }),
+      category: { name: (product as { categoryName: string }).categoryName },
+      customFields: JSON.parse((product as { customFields: string }).customFields || '{}')
     }
 
     return NextResponse.json(formattedProduct, { status: 201 })

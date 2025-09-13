@@ -1,6 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/prisma'
 
+// GET /api/products/[id] - Get a specific product with variants
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const params = await context.params
+    const productId = params.id
+
+    // Get the product with category info
+    const product = await db.get(`
+      SELECT p.*, c.name as categoryName 
+      FROM products p 
+      JOIN categories c ON p.categoryId = c.id 
+      WHERE p.id = ? AND p.isActive = 1
+    `, [productId])
+
+    if (!product) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+    }
+
+    // Get variants for the product
+    const variants = await db.all(`
+      SELECT * FROM product_variants 
+      WHERE productId = ? AND isActive = 1
+      ORDER BY name ASC
+    `, [productId])
+
+    const formattedProduct = {
+      ...(product as Record<string, unknown> & { categoryName: string; customFields: string }),
+      category: { name: (product as { categoryName: string }).categoryName },
+      customFields: JSON.parse((product as { customFields: string }).customFields || '{}'),
+      variants: (variants as Array<Record<string, unknown> & { attributes: string }>).map(variant => ({
+        ...variant,
+        attributes: JSON.parse(variant.attributes || '{}')
+      }))
+    }
+
+    return NextResponse.json(formattedProduct)
+  } catch (error) {
+    console.error('Failed to fetch product:', error)
+    return NextResponse.json({ error: 'Failed to fetch product' }, { status: 500 })
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -13,7 +58,7 @@ export async function PUT(
     await db.run(`
       UPDATE products 
       SET name = ?, description = ?, price = ?, cost = ?, sku = ?, barcode = ?, 
-          stock = ?, minStock = ?, categoryId = ?, image = ?, updatedAt = CURRENT_TIMESTAMP
+          stock = ?, minStock = ?, categoryId = ?, image = ?, customFields = ?, updatedAt = CURRENT_TIMESTAMP
       WHERE id = ?
     `, [
       data.name,
@@ -26,6 +71,7 @@ export async function PUT(
       parseInt(data.minStock) || 0,
       data.categoryId,
       data.image || null,
+      JSON.stringify(data.customFields || {}),
       productId
     ])
 
@@ -42,8 +88,9 @@ export async function PUT(
     }
 
     const formattedProduct = {
-      ...(product as Record<string, unknown> & { categoryName: string }),
-      category: { name: (product as { categoryName: string }).categoryName }
+      ...(product as Record<string, unknown> & { categoryName: string; customFields: string }),
+      category: { name: (product as { categoryName: string }).categoryName },
+      customFields: JSON.parse((product as { customFields: string }).customFields || '{}')
     }
 
     return NextResponse.json(formattedProduct)
