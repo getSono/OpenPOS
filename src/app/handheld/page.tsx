@@ -34,7 +34,32 @@ export default function HandheldPage() {
   const [nfcScanning, setNfcScanning] = useState(false)
   const [lastAction, setLastAction] = useState('')
   const [isCameraActive, setIsCameraActive] = useState(false)
+  const [cameraSupported, setCameraSupported] = useState(true)
   const videoRef = useRef<HTMLVideoElement>(null)
+
+  // Check camera support on component mount
+  useEffect(() => {
+    const checkCameraSupport = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraSupported(false)
+        setLastAction('Camera not supported in this browser')
+        return
+      }
+      
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        const hasCamera = devices.some(device => device.kind === 'videoinput')
+        if (!hasCamera) {
+          setCameraSupported(false)
+          setLastAction('No camera found on this device')
+        }
+      } catch (error) {
+        console.warn('Could not check camera availability:', error)
+      }
+    }
+    
+    checkCameraSupport()
+  }, [])
 
   // Simulate device connection
   useEffect(() => {
@@ -62,12 +87,32 @@ export default function HandheldPage() {
       })
       if (videoRef.current) {
         videoRef.current.srcObject = stream
+        // Ensure the video plays
+        try {
+          await videoRef.current.play()
+        } catch (playError) {
+          console.warn('Video autoplay failed:', playError)
+        }
         setIsCameraActive(true)
         setLastAction('Camera started - point at barcode to scan')
       }
     } catch (error) {
       console.error('Error accessing camera:', error)
-      setLastAction('Camera access denied or not available')
+      let errorMessage = 'Camera access denied or not available'
+      
+      if (error instanceof Error) {
+        if (error.name === 'NotFoundError') {
+          errorMessage = 'No camera found on this device'
+        } else if (error.name === 'NotAllowedError') {
+          errorMessage = 'Camera permission denied - please allow camera access'
+        } else if (error.name === 'NotSupportedError') {
+          errorMessage = 'Camera not supported in this browser'
+        } else if (error.name === 'NotReadableError') {
+          errorMessage = 'Camera is being used by another application'
+        }
+      }
+      
+      setLastAction(errorMessage)
     }
   }, [])
 
@@ -334,10 +379,11 @@ export default function HandheldPage() {
                           <Button 
                             onClick={startCamera} 
                             size="sm"
-                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                            disabled={!cameraSupported}
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <Camera className="w-4 h-4 mr-2" />
-                            Start Camera
+                            {cameraSupported ? 'Start Camera' : 'Camera Unavailable'}
                           </Button>
                         ) : (
                           <Button 
@@ -352,17 +398,44 @@ export default function HandheldPage() {
                         )}
                       </div>
                       
-                      {isCameraActive && (
+                      {isCameraActive ? (
                         <div className="space-y-2">
                           <video
                             ref={videoRef}
                             autoPlay
                             playsInline
-                            className="w-full h-48 bg-gray-800 rounded-lg border border-white/20"
+                            muted
+                            className="w-full h-48 bg-gray-800 rounded-lg border border-white/20 object-cover"
+                            onLoadedMetadata={() => {
+                              // Ensure video plays when metadata is loaded
+                              if (videoRef.current) {
+                                videoRef.current.play().catch(console.warn)
+                              }
+                            }}
                           />
                           <p className="text-xs text-center text-gray-300">
                             Point camera at barcode to scan automatically
                           </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="w-full h-48 bg-gray-800 rounded-lg border border-white/20 flex items-center justify-center">
+                            <div className="text-center text-gray-400">
+                              <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm">Camera Preview</p>
+                              <p className="text-xs">
+                                {cameraSupported 
+                                  ? 'Click "Start Camera" to begin scanning' 
+                                  : 'Camera not available on this device'
+                                }
+                              </p>
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-lg bg-blue-500/20 border border-blue-400/30">
+                            <p className="text-xs text-blue-200">
+                              📱 Camera requires HTTPS or localhost. Use a mobile device for best barcode scanning experience.
+                            </p>
+                          </div>
                         </div>
                       )}
                     </div>
