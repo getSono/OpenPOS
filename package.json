@@ -13,7 +13,8 @@
     "db:generate": "prisma generate",
     "db:backup": "./scripts/backup-sqlite.sh",
     "db:migrate-to-supabase": "tsx scripts/migrate-to-supabase.ts",
-    "db:validate-setup": "tsx scripts/validate-migration-setup.ts"
+    "db:validate-setup": "tsx scripts/validate-migration-setup.ts",
+    "test:migration": "./scripts/test-migration-system.sh"
   },
   "dependencies": {
     "@prisma/client": "^6.16.1",
