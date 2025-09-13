@@ -24,11 +24,24 @@ import {
 interface Product {
   id: string
   name: string
+  description?: string
   price: number
+  cost?: number
+  sku?: string
   barcode?: string
   category: { name: string }
+  categoryId: string
   stock: number
+  minStock: number
   isActive: boolean
+  image?: string
+}
+
+interface Category {
+  id: string
+  name: string
+  description?: string
+  color?: string
 }
 
 interface User {
@@ -58,6 +71,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
 
   // Form states
@@ -76,6 +90,13 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
       if (productsResponse.ok) {
         const productsData = await productsResponse.json()
         setProducts(productsData)
+      }
+
+      // Fetch categories
+      const categoriesResponse = await fetch('/api/categories')
+      if (categoriesResponse.ok) {
+        const categoriesData = await categoriesResponse.json()
+        setCategories(categoriesData)
       }
 
       // For now, we'll use mock data for users and discount codes
@@ -97,15 +118,59 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
     }
   }
 
-  const handleSaveProduct = async (product: Partial<Product>) => {
-    // TODO: Implement product save API call
-    console.log('Saving product:', product)
-    setEditingProduct(null)
+  const handleSaveProduct = async (productData: Partial<Product>) => {
+    try {
+      const method = editingProduct?.id ? 'PUT' : 'POST'
+      const url = editingProduct?.id ? `/api/products/${editingProduct.id}` : '/api/products'
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData),
+      })
+
+      if (response.ok) {
+        const savedProduct = await response.json()
+        
+        if (editingProduct?.id) {
+          // Update existing product
+          setProducts(products.map(p => p.id === editingProduct.id ? savedProduct : p))
+        } else {
+          // Add new product
+          setProducts([...products, savedProduct])
+        }
+        
+        setEditingProduct(null)
+      } else {
+        const error = await response.json()
+        alert(`Failed to save product: ${error.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Failed to save product:', error)
+      alert('Failed to save product. Please try again.')
+    }
   }
 
   const handleDeleteProduct = async (id: string) => {
-    // TODO: Implement product delete API call
-    console.log('Deleting product:', id)
+    if (!confirm('Are you sure you want to delete this product?')) return
+    
+    try {
+      const response = await fetch(`/api/products/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        setProducts(products.filter(p => p.id !== id))
+      } else {
+        const error = await response.json()
+        alert(`Failed to delete product: ${error.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Failed to delete product:', error)
+      alert('Failed to delete product. Please try again.')
+    }
   }
 
   const ProductForm = ({ product, onSave, onCancel }: { 
@@ -115,54 +180,153 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   }) => {
     const [formData, setFormData] = useState({
       name: product?.name || '',
+      description: product?.description || '',
       price: product?.price || 0,
+      cost: product?.cost || 0,
+      sku: product?.sku || '',
       barcode: product?.barcode || '',
       stock: product?.stock || 0,
+      minStock: product?.minStock || 0,
+      categoryId: product?.categoryId || '',
+      image: product?.image || '',
     })
 
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{product ? 'Edit Product' : 'Add Product'}</CardTitle>
+          <CardTitle>{product?.id ? 'Edit Product' : 'Add Product'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Product name"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="sku">SKU</Label>
+              <Input
+                id="sku"
+                value={formData.sku}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                placeholder="Stock keeping unit"
+              />
+            </div>
+          </div>
+
           <div>
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="description">Description</Label>
             <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Product description"
             />
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="price">Price *</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="cost">Cost</Label>
+              <Input
+                id="cost"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.cost}
+                onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="stock">Stock</Label>
+              <Input
+                id="stock"
+                type="number"
+                min="0"
+                value={formData.stock}
+                onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <Label htmlFor="minStock">Min Stock</Label>
+              <Input
+                id="minStock"
+                type="number"
+                min="0"
+                value={formData.minStock}
+                onChange={(e) => setFormData({ ...formData, minStock: parseInt(e.target.value) || 0 })}
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="category">Category *</Label>
+              <Select 
+                value={formData.categoryId} 
+                onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="barcode">Barcode</Label>
+              <Input
+                id="barcode"
+                value={formData.barcode}
+                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                placeholder="Product barcode"
+              />
+            </div>
+          </div>
+
           <div>
-            <Label htmlFor="price">Price</Label>
+            <Label htmlFor="image">Image URL</Label>
             <Input
-              id="price"
-              type="number"
-              step="0.01"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+              id="image"
+              value={formData.image}
+              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+              placeholder="https://example.com/image.jpg"
             />
           </div>
-          <div>
-            <Label htmlFor="barcode">Barcode</Label>
-            <Input
-              id="barcode"
-              value={formData.barcode}
-              onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label htmlFor="stock">Stock</Label>
-            <Input
-              id="stock"
-              type="number"
-              value={formData.stock}
-              onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
-            />
-          </div>
+
           <div className="flex space-x-2">
-            <Button onClick={() => onSave(formData)}>
+            <Button 
+              onClick={() => onSave(formData)}
+              disabled={!formData.name || !formData.categoryId}
+            >
               <Save className="w-4 h-4 mr-2" />
               Save
             </Button>
@@ -328,9 +492,11 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Name</TableHead>
+                          <TableHead>SKU</TableHead>
                           <TableHead>Price</TableHead>
-                          <TableHead>Barcode</TableHead>
+                          <TableHead>Cost</TableHead>
                           <TableHead>Stock</TableHead>
+                          <TableHead>Min Stock</TableHead>
                           <TableHead>Category</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Actions</TableHead>
@@ -340,9 +506,15 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
                         {products.map((product) => (
                           <TableRow key={product.id}>
                             <TableCell className="font-medium">{product.name}</TableCell>
+                            <TableCell className="text-sm text-gray-600">{product.sku || 'N/A'}</TableCell>
                             <TableCell>${product.price.toFixed(2)}</TableCell>
-                            <TableCell>{product.barcode || 'N/A'}</TableCell>
-                            <TableCell>{product.stock}</TableCell>
+                            <TableCell>${(product.cost || 0).toFixed(2)}</TableCell>
+                            <TableCell>
+                              <span className={product.stock <= (product.minStock || 0) ? 'text-red-600 font-medium' : ''}>
+                                {product.stock}
+                              </span>
+                            </TableCell>
+                            <TableCell>{product.minStock || 0}</TableCell>
                             <TableCell>{product.category.name}</TableCell>
                             <TableCell>
                               <Badge variant={product.isActive ? 'default' : 'secondary'}>

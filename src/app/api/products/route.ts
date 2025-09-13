@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/prisma'
+import { randomUUID } from 'crypto'
 
 export async function GET() {
   try {
@@ -28,20 +29,24 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
     
-    const result = await db.run(`
-      INSERT INTO products (name, description, price, cost, sku, barcode, stock, minStock, categoryId, image)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    // Generate a unique ID for the product
+    const productId = randomUUID()
+    
+    await db.run(`
+      INSERT INTO products (id, name, description, price, cost, sku, barcode, stock, minStock, categoryId, image)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
+      productId,
       data.name,
-      data.description,
+      data.description || null,
       parseFloat(data.price),
       data.cost ? parseFloat(data.cost) : 0,
-      data.sku,
-      data.barcode,
+      data.sku || null,
+      data.barcode || null,
       parseInt(data.stock) || 0,
       parseInt(data.minStock) || 0,
       data.categoryId,
-      data.image
+      data.image || null
     ])
 
     // Get the created product with category info
@@ -50,7 +55,11 @@ export async function POST(request: NextRequest) {
       FROM products p 
       JOIN categories c ON p.categoryId = c.id 
       WHERE p.id = ?
-    `, [result.lastID])
+    `, [productId])
+
+    if (!product) {
+      return NextResponse.json({ error: 'Failed to retrieve created product' }, { status: 500 })
+    }
 
     const formattedProduct = {
       ...(product as Record<string, unknown> & { categoryName: string }),
