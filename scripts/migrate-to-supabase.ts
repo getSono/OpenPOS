@@ -2,6 +2,41 @@ import { PrismaClient } from '@prisma/client'
 import sqlite3 from 'sqlite3'
 import { promisify } from 'util'
 
+// Enum type definitions (matching Prisma schema)
+enum Role {
+  ADMIN = 'ADMIN',
+  MANAGER = 'MANAGER',
+  CASHIER = 'CASHIER'
+}
+
+enum PaymentMethod {
+  CASH = 'CASH',
+  CARD = 'CARD',
+  DIGITAL = 'DIGITAL',
+  CHECK = 'CHECK',
+  PAYPAL = 'PAYPAL'
+}
+
+enum TransactionStatus {
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+  REFUNDED = 'REFUNDED'
+}
+
+enum OrderStatus {
+  PENDING = 'PENDING',
+  IN_PROGRESS = 'IN_PROGRESS',
+  READY = 'READY',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED'
+}
+
+enum DiscountType {
+  PERCENTAGE = 'PERCENTAGE',
+  FIXED_AMOUNT = 'FIXED_AMOUNT'
+}
+
 // Initialize Prisma client for PostgreSQL (Supabase)
 const prismaPostgres = new PrismaClient()
 
@@ -128,6 +163,85 @@ interface SQLiteTransactionItem {
   productId: string
 }
 
+// Utility functions to convert string values to proper enum types
+function parseRole(role: string): Role {
+  switch (role.toUpperCase()) {
+    case 'ADMIN':
+      return Role.ADMIN
+    case 'MANAGER':
+      return Role.MANAGER
+    case 'CASHIER':
+      return Role.CASHIER
+    default:
+      console.warn(`Unknown role: ${role}, defaulting to CASHIER`)
+      return Role.CASHIER
+  }
+}
+
+function parsePaymentMethod(method: string): PaymentMethod {
+  switch (method.toUpperCase()) {
+    case 'CASH':
+      return PaymentMethod.CASH
+    case 'CARD':
+      return PaymentMethod.CARD
+    case 'DIGITAL':
+      return PaymentMethod.DIGITAL
+    case 'CHECK':
+      return PaymentMethod.CHECK
+    case 'PAYPAL':
+      return PaymentMethod.PAYPAL
+    default:
+      console.warn(`Unknown payment method: ${method}, defaulting to CASH`)
+      return PaymentMethod.CASH
+  }
+}
+
+function parseTransactionStatus(status: string): TransactionStatus {
+  switch (status.toUpperCase()) {
+    case 'PENDING':
+      return TransactionStatus.PENDING
+    case 'COMPLETED':
+      return TransactionStatus.COMPLETED
+    case 'CANCELLED':
+      return TransactionStatus.CANCELLED
+    case 'REFUNDED':
+      return TransactionStatus.REFUNDED
+    default:
+      console.warn(`Unknown transaction status: ${status}, defaulting to COMPLETED`)
+      return TransactionStatus.COMPLETED
+  }
+}
+
+function parseOrderStatus(status: string): OrderStatus {
+  switch (status.toUpperCase()) {
+    case 'PENDING':
+      return OrderStatus.PENDING
+    case 'IN_PROGRESS':
+      return OrderStatus.IN_PROGRESS
+    case 'READY':
+      return OrderStatus.READY
+    case 'COMPLETED':
+      return OrderStatus.COMPLETED
+    case 'CANCELLED':
+      return OrderStatus.CANCELLED
+    default:
+      console.warn(`Unknown order status: ${status}, defaulting to PENDING`)
+      return OrderStatus.PENDING
+  }
+}
+
+function parseDiscountType(type: string): DiscountType {
+  switch (type.toUpperCase()) {
+    case 'PERCENTAGE':
+      return DiscountType.PERCENTAGE
+    case 'FIXED_AMOUNT':
+      return DiscountType.FIXED_AMOUNT
+    default:
+      console.warn(`Unknown discount type: ${type}, defaulting to PERCENTAGE`)
+      return DiscountType.PERCENTAGE
+  }
+}
+
 async function checkSQLiteDatabase(): Promise<boolean> {
   try {
     const result = await sqliteGet("SELECT name FROM sqlite_master WHERE type='table'")
@@ -186,7 +300,7 @@ async function migrateUsers(): Promise<number> {
           name: user.name,
           pin: user.pin,
           nfcCode: user.nfcCode,
-          role: user.role,
+          role: parseRole(user.role),
           isActive: Boolean(user.isActive),
           createdAt: new Date(user.createdAt),
           updatedAt: new Date(user.updatedAt)
@@ -196,7 +310,7 @@ async function migrateUsers(): Promise<number> {
           name: user.name,
           pin: user.pin,
           nfcCode: user.nfcCode,
-          role: user.role,
+          role: parseRole(user.role),
           isActive: Boolean(user.isActive),
           createdAt: new Date(user.createdAt),
           updatedAt: new Date(user.updatedAt)
@@ -301,7 +415,7 @@ async function migrateDiscountCodes(): Promise<number> {
           code: discountCode.code,
           name: discountCode.name,
           description: discountCode.description,
-          type: discountCode.type,
+          type: parseDiscountType(discountCode.type),
           value: Number(discountCode.value),
           minAmount: discountCode.minAmount ? Number(discountCode.minAmount) : null,
           maxUses: discountCode.maxUses,
@@ -317,7 +431,7 @@ async function migrateDiscountCodes(): Promise<number> {
           code: discountCode.code,
           name: discountCode.name,
           description: discountCode.description,
-          type: discountCode.type,
+          type: parseDiscountType(discountCode.type),
           value: Number(discountCode.value),
           minAmount: discountCode.minAmount ? Number(discountCode.minAmount) : null,
           maxUses: discountCode.maxUses,
@@ -408,9 +522,9 @@ async function migrateTransactions(): Promise<number> {
           total: Number(transaction.total),
           amountPaid: transaction.amountPaid ? Number(transaction.amountPaid) : null,
           changeAmount: Number(transaction.changeAmount) || 0,
-          paymentMethod: transaction.paymentMethod,
-          status: transaction.status,
-          orderStatus: transaction.orderStatus,
+          paymentMethod: parsePaymentMethod(transaction.paymentMethod),
+          status: parseTransactionStatus(transaction.status),
+          orderStatus: parseOrderStatus(transaction.orderStatus),
           notes: transaction.notes,
           userId: transaction.userId,
           customerId: transaction.customerId,
@@ -429,9 +543,9 @@ async function migrateTransactions(): Promise<number> {
           total: Number(transaction.total),
           amountPaid: transaction.amountPaid ? Number(transaction.amountPaid) : null,
           changeAmount: Number(transaction.changeAmount) || 0,
-          paymentMethod: transaction.paymentMethod,
-          status: transaction.status,
-          orderStatus: transaction.orderStatus,
+          paymentMethod: parsePaymentMethod(transaction.paymentMethod),
+          status: parseTransactionStatus(transaction.status),
+          orderStatus: parseOrderStatus(transaction.orderStatus),
           notes: transaction.notes,
           userId: transaction.userId,
           customerId: transaction.customerId,

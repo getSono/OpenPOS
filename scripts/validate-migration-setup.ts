@@ -1,8 +1,8 @@
 import { PrismaClient } from '@prisma/client'
 import sqlite3 from 'sqlite3'
 import { promisify } from 'util'
-import fs from 'fs'
-import path from 'path'
+import * as fs from 'fs'
+import * as path from 'path'
 
 // Color codes for console output
 const colors = {
