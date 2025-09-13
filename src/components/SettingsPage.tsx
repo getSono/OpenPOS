@@ -238,7 +238,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{user ? 'Edit User' : 'Add User'}</CardTitle>
+          <CardTitle>{user?.id ? 'Edit User' : 'Add User'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -251,13 +251,13 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
             />
           </div>
           <div>
-            <Label htmlFor="userPin">PIN {user ? '(leave empty to keep current)' : '(4-6 digits)'}</Label>
+            <Label htmlFor="userPin">PIN {user?.id ? '(leave empty to keep current)' : '(4-6 digits)'}</Label>
             <Input
               id="userPin"
               type="password"
               value={formData.pin}
               onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
-              placeholder={user ? 'Leave empty to keep current PIN' : 'Enter 4-6 digit PIN'}
+              placeholder={user?.id ? 'Leave empty to keep current PIN' : 'Enter 4-6 digit PIN'}
               maxLength={6}
             />
           </div>
@@ -283,7 +283,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
               placeholder="Enter NFC code"
             />
           </div>
-          {user && (
+          {user?.id && (
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
