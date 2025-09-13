@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { QrCode, Wifi, User, Package, Clock, CheckCircle } from 'lucide-react'
+import { QrCode, Wifi, User, Package, Clock, CheckCircle, Camera, CameraOff } from 'lucide-react'
 
 interface Product {
   id: string
@@ -33,6 +33,8 @@ export default function HandheldPage() {
   const [scanning, setScanning] = useState(false)
   const [nfcScanning, setNfcScanning] = useState(false)
   const [lastAction, setLastAction] = useState('')
+  const [isCameraActive, setIsCameraActive] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   // Simulate device connection
   useEffect(() => {
@@ -51,6 +53,33 @@ export default function HandheldPage() {
     window.addEventListener('keypress', handleKeyPress)
     return () => window.removeEventListener('keypress', handleKeyPress)
   }, [barcodeInput])
+
+  // Camera functions
+  const startCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      })
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        setIsCameraActive(true)
+        setLastAction('Camera started - point at barcode to scan')
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error)
+      setLastAction('Camera access denied or not available')
+    }
+  }, [])
+
+  const stopCamera = useCallback(() => {
+    if (videoRef.current?.srcObject) {
+      const tracks = (videoRef.current.srcObject as MediaStream).getTracks()
+      tracks.forEach(track => track.stop())
+      videoRef.current.srcObject = null
+      setIsCameraActive(false)
+      setLastAction('Camera stopped')
+    }
+  }, [])
 
   const authenticateNFC = async () => {
     if (!nfcInput) return
@@ -184,6 +213,7 @@ export default function HandheldPage() {
     setCurrentUser(null)
     setScannedProducts([])
     setLastAction('Logged out')
+    stopCamera() // Stop camera when logging out
   }
 
   return (
@@ -296,7 +326,50 @@ export default function HandheldPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {/* Camera Scanner */}
                     <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium text-gray-200">Camera Scanner</h3>
+                        {!isCameraActive ? (
+                          <Button 
+                            onClick={startCamera} 
+                            size="sm"
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                          >
+                            <Camera className="w-4 h-4 mr-2" />
+                            Start Camera
+                          </Button>
+                        ) : (
+                          <Button 
+                            onClick={stopCamera} 
+                            size="sm"
+                            variant="outline"
+                            className="border-white/30 text-white hover:bg-white/20"
+                          >
+                            <CameraOff className="w-4 h-4 mr-2" />
+                            Stop Camera
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {isCameraActive && (
+                        <div className="space-y-2">
+                          <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            className="w-full h-48 bg-gray-800 rounded-lg border border-white/20"
+                          />
+                          <p className="text-xs text-center text-gray-300">
+                            Point camera at barcode to scan automatically
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Manual Input */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium text-gray-200">Manual Entry</h3>
                       <div className="flex space-x-3">
                         <Input
                           value={barcodeInput}
