@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { QrCode, Wifi, User, Package, Clock, CheckCircle, Camera, CameraOff } from 'lucide-react'
+import { BrowserBarcodeReader } from '@zxing/library'
 
 interface Product {
   id: string
@@ -35,7 +36,19 @@ export default function HandheldPage() {
   const [lastAction, setLastAction] = useState('')
   const [isCameraActive, setIsCameraActive] = useState(false)
   const [cameraSupported, setCameraSupported] = useState(true)
+  const [isScanning, setIsScanning] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const codeReader = useRef<BrowserBarcodeReader | null>(null)
+
+  // Initialize barcode reader
+  useEffect(() => {
+    codeReader.current = new BrowserBarcodeReader()
+    return () => {
+      if (codeReader.current) {
+        codeReader.current.reset()
+      }
+    }
+  }, [])
 
   // Check camera support on component mount
   useEffect(() => {
@@ -67,6 +80,46 @@ export default function HandheldPage() {
     return () => clearTimeout(timer)
   }, [])
 
+  // Handle barcode detection from camera
+  const handleBarcodeDetected = useCallback(async (barcode: string) => {
+    if (isScanning) return // Prevent multiple rapid scans
+    
+    setIsScanning(true)
+    setBarcodeInput(barcode)
+    setLastAction(`Camera detected: ${barcode}`)
+    
+    try {
+      const response = await fetch(`/api/products/barcode/${barcode}`)
+      
+      if (response.ok) {
+        const product = await response.json()
+        setScannedProducts(prev => [product, ...prev.slice(0, 9)]) // Keep last 10
+        setLastAction(`Camera scanned: ${product.name}`)
+        
+        // Add to main POS cart with complete product data
+        await fetch('/api/cart/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            productId: product.id, 
+            quantity: 1,
+            product: product
+          })
+        })
+      } else {
+        setLastAction(`Camera detected barcode: ${barcode} - Product not found`)
+      }
+    } catch (error) {
+      setLastAction(`Camera scan error for: ${barcode}`)
+    }
+    
+    // Reset scanning state after a delay to allow for new scans
+    setTimeout(() => {
+      setIsScanning(false)
+      setBarcodeInput('')
+    }, 2000)
+  }, [isScanning])
+
   // Listen for hardware scanner input
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -85,7 +138,7 @@ export default function HandheldPage() {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'environment' } 
       })
-      if (videoRef.current) {
+      if (videoRef.current && codeReader.current) {
         videoRef.current.srcObject = stream
         // Ensure the video plays
         try {
@@ -95,6 +148,18 @@ export default function HandheldPage() {
         }
         setIsCameraActive(true)
         setLastAction('Camera started - point at barcode to scan')
+        
+        // Start barcode detection
+        try {
+          codeReader.current.decodeFromVideoDevice(null, videoRef.current, (result, error) => {
+            if (result) {
+              handleBarcodeDetected(result.getText())
+            }
+            // Ignore errors as they're normal when no barcode is visible
+          })
+        } catch (barcodeError) {
+          console.warn('Barcode detection setup failed:', barcodeError)
+        }
       }
     } catch (error) {
       console.error('Error accessing camera:', error)
@@ -114,7 +179,7 @@ export default function HandheldPage() {
       
       setLastAction(errorMessage)
     }
-  }, [])
+  }, [handleBarcodeDetected])
 
   const stopCamera = useCallback(() => {
     if (videoRef.current?.srcObject) {
@@ -124,6 +189,13 @@ export default function HandheldPage() {
       setIsCameraActive(false)
       setLastAction('Camera stopped')
     }
+    
+    // Stop barcode reader
+    if (codeReader.current) {
+      codeReader.current.reset()
+    }
+    
+    setIsScanning(false)
   }, [])
 
   const authenticateNFC = async () => {
@@ -414,7 +486,10 @@ export default function HandheldPage() {
                             }}
                           />
                           <p className="text-xs text-center text-gray-300">
-                            Point camera at barcode to scan automatically
+                            {isScanning 
+                              ? '🔍 Scanning barcode...' 
+                              : 'Point camera at barcode - automatic detection enabled'
+                            }
                           </p>
                         </div>
                       ) : (
