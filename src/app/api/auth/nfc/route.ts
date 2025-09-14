@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,25 +10,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by NFC code
-    type UserRow = { id: number; name: string; role: string } | undefined;
-    const user = await db.get(
-      `SELECT id, name, role FROM users WHERE nfcCode = ? AND isActive = 1`,
-      [nfcCode.trim()]
-    ) as UserRow;
+    const user = await prisma.user.findFirst({
+      where: {
+        nfcCode: nfcCode.trim(),
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        nfcCode: true
+      }
+    })
 
-    if (!user || !user.id || !user.name || !user.role) {
-      return NextResponse.json({ error: 'Invalid NFC code' }, { status: 401 });
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid NFC code' }, { status: 401 })
     }
 
-    // Return user data (excluding sensitive information)
-    const userData = {
-      id: user.id,
-      name: user.name,
-      role: user.role,
-      nfcCode: nfcCode.trim()
-    };
-
-    return NextResponse.json(userData);
+    return NextResponse.json(user)
   } catch (error) {
     console.error('NFC authentication error:', error)
     return NextResponse.json({ error: 'Authentication failed' }, { status: 500 })

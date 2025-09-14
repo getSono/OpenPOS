@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export async function PUT(
   request: NextRequest,
@@ -25,52 +25,42 @@ export async function PUT(
     }
 
     // Update the order status
-    const updateQuery = workerId 
-      ? `UPDATE transactions SET orderStatus = ?, workerId = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`
-      : `UPDATE transactions SET orderStatus = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`
-    
-    const params_array = workerId ? [status, workerId, orderId] : [status, orderId]
-    
-    await db.run(updateQuery, params_array)
-
-    // Get the updated order with all details
-    const updatedOrder = await db.get(`
-      SELECT t.*, u.name as userName, w.name as workerName
-      FROM transactions t 
-      JOIN users u ON t.userId = u.id 
-      LEFT JOIN workers w ON t.workerId = w.id
-      WHERE t.id = ?
-    `, [orderId])
-
-    if (!updatedOrder) {
-      return NextResponse.json(
-        { error: 'Order not found' },
-        { status: 404 }
-      )
+    const updateData: any = {
+      orderStatus: status
     }
 
-    // Get transaction items
-    const items = await db.all(`
-      SELECT ti.*, p.name as productName, p.description as productDescription
-      FROM transaction_items ti
-      JOIN products p ON ti.productId = p.id
-      WHERE ti.transactionId = ?
-    `, [orderId])
+    if (workerId) {
+      updateData.workerId = workerId
+    }
 
-    const result = {
-      ...(updatedOrder as Record<string, unknown>),
-      user: { name: (updatedOrder as any).userName },
-      worker: (updatedOrder as any).workerName ? { name: (updatedOrder as any).workerName } : null,
-      items: (items as Array<Record<string, unknown> & { productName: string; productDescription?: string }>).map(item => ({
-        ...item,
-        product: { 
-          name: item.productName,
-          description: item.productDescription
+    const updatedOrder = await prisma.transaction.update({
+      where: { id: orderId },
+      data: updateData,
+      include: {
+        user: {
+          select: {
+            name: true
+          }
+        },
+        worker: {
+          select: {
+            name: true
+          }
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                description: true
+              }
+            }
+          }
         }
-      }))
-    }
+      }
+    })
 
-    return NextResponse.json(result)
+    return NextResponse.json(updatedOrder)
   } catch (error) {
     console.error('Failed to update order status:', error)
     return NextResponse.json(

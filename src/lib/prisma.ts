@@ -1,50 +1,15 @@
-import sqlite3 from 'sqlite3'
-import path from 'path'
+import { PrismaClient } from '@prisma/client'
 
-const dbPath = path.join(process.cwd(), 'dev.db')
-
-class Database {
-  private db: sqlite3.Database
-
-  constructor() {
-    this.db = new sqlite3.Database(dbPath)
-  }
-
-  all(sql: string, params: unknown[] = []): Promise<unknown[]> {
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, params, (err, rows) => {
-        if (err) reject(err)
-        else resolve(rows)
-      })
-    })
-  }
-
-  get(sql: string, params: unknown[] = []): Promise<unknown> {
-    return new Promise((resolve, reject) => {
-      this.db.get(sql, params, (err, row) => {
-        if (err) reject(err)
-        else resolve(row)
-      })
-    })
-  }
-
-  run(sql: string, params: unknown[] = []): Promise<{ lastID: number; changes: number }> {
-    return new Promise((resolve, reject) => {
-      this.db.run(sql, params, function(err) {
-        if (err) reject(err)
-        else resolve({ lastID: this.lastID, changes: this.changes })
-      })
-    })
-  }
-
-  close(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.db.close((err) => {
-        if (err) reject(err)
-        else resolve()
-      })
-    })
-  }
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined
 }
 
-export const db = new Database()
+const prisma = globalThis.prisma || new PrismaClient()
+
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.prisma = prisma
+}
+
+export { prisma }
+export default prisma

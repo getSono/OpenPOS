@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
@@ -16,41 +16,28 @@ export async function GET(
     }
 
     // Find product by barcode
-    type ProductRow = {
-      id: number;
-      name: string;
-      description: string;
-      price: number;
-      barcode: string;
-      stock: number;
-      categoryName: string;
-    } | undefined;
-    const product = await db.get(
-      `SELECT p.*, c.name as categoryName FROM products p JOIN categories c ON p.categoryId = c.id WHERE p.barcode = ? AND p.isActive = 1`,
-      [barcode]
-    ) as ProductRow;
+    const product = await prisma.product.findFirst({
+      where: {
+        barcode: barcode,
+        isActive: true
+      },
+      include: {
+        category: {
+          select: {
+            name: true
+          }
+        }
+      }
+    })
 
-    if (!product || !product.id || !product.name || !product.price || !product.barcode || !product.categoryName) {
+    if (!product) {
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
-      );
+      )
     }
 
-    // Format the response
-    const result = {
-      id: product.id,
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      barcode: product.barcode,
-      stock: product.stock,
-      category: {
-        name: product.categoryName
-      }
-    };
-
-    return NextResponse.json(result);
+    return NextResponse.json(product)
   } catch (error) {
     console.error('Failed to find product by barcode:', error)
     return NextResponse.json(
