@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
@@ -11,9 +11,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all active users to check PIN
-    const users = await db.all(
-      'SELECT id, name, role, pin FROM users WHERE isActive = 1'
-    ) as Array<{ id: string; name: string; role: string; pin: string }>
+    const users = await prisma.user.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        pin: true
+      }
+    })
 
     let authenticatedUser = null
 
