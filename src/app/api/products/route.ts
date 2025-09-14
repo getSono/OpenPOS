@@ -1,23 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { supabase, TABLES } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    const products = await prisma.product.findMany({
-      where: {
-        isActive: true
-      },
-      include: {
-        category: {
-          select: {
-            name: true
-          }
-        }
-      },
-      orderBy: {
-        name: 'asc'
-      }
-    })
+    const { data: products, error } = await supabase
+      .from(TABLES.PRODUCTS)
+      .select(`
+        *,
+        category:categoryId (
+          name
+        )
+      `)
+      .eq('isActive', true)
+      .order('name', { ascending: true })
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
+    }
 
     return NextResponse.json(products)
   } catch (error) {
@@ -30,27 +30,37 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
     
-    const product = await prisma.product.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        price: parseFloat(data.price),
-        cost: data.cost ? parseFloat(data.cost) : 0,
-        sku: data.sku,
-        barcode: data.barcode,
-        stock: parseInt(data.stock) || 0,
-        minStock: parseInt(data.minStock) || 0,
-        categoryId: data.categoryId,
-        image: data.image
-      },
-      include: {
-        category: {
-          select: {
-            name: true
-          }
-        }
-      }
-    })
+    const productData = {
+      name: data.name,
+      description: data.description,
+      price: parseFloat(data.price),
+      cost: data.cost ? parseFloat(data.cost) : 0,
+      sku: data.sku,
+      barcode: data.barcode,
+      stock: parseInt(data.stock) || 0,
+      minStock: parseInt(data.minStock) || 0,
+      categoryId: data.categoryId,
+      image: data.image,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    const { data: product, error } = await supabase
+      .from(TABLES.PRODUCTS)
+      .insert(productData)
+      .select(`
+        *,
+        category:categoryId (
+          name
+        )
+      `)
+      .single()
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })
+    }
 
     return NextResponse.json(product, { status: 201 })
   } catch (error) {

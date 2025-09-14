@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { supabase, TABLES } from '@/lib/supabase'
 
 export async function GET(
   request: NextRequest,
@@ -16,24 +16,29 @@ export async function GET(
     }
 
     // Find product by barcode
-    const product = await prisma.product.findFirst({
-      where: {
-        barcode: barcode,
-        isActive: true
-      },
-      include: {
-        category: {
-          select: {
-            name: true
-          }
-        }
-      }
-    })
+    const { data: product, error } = await supabase
+      .from(TABLES.PRODUCTS)
+      .select(`
+        *,
+        category:categoryId (
+          name
+        )
+      `)
+      .eq('barcode', barcode)
+      .eq('isActive', true)
+      .single()
 
-    if (!product) {
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: 'Product not found' },
+          { status: 404 }
+        )
+      }
+      console.error('Supabase error:', error)
       return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
+        { error: 'Failed to find product' },
+        { status: 500 }
       )
     }
 

@@ -1,24 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { supabase, TABLES } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 
 // GET /api/users - List all users
 export async function GET() {
   try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        nfcCode: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    })
+    const { data: users, error } = await supabase
+      .from(TABLES.USERS)
+      .select('id, name, role, nfcCode, isActive, createdAt, updatedAt')
+      .order('createdAt', { ascending: false })
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
+    }
 
     return NextResponse.json(users)
   } catch (error) {
@@ -58,9 +53,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if PIN already exists
-    const existingPin = await prisma.user.findFirst({
-      where: { pin }
-    })
+    const { data: existingPin } = await supabase
+      .from(TABLES.USERS)
+      .select('id')
+      .eq('pin', pin)
+      .single()
+
     if (existingPin) {
       return NextResponse.json(
         { error: 'PIN already exists' }, 
@@ -70,9 +68,12 @@ export async function POST(request: NextRequest) {
 
     // Check if NFC code already exists (if provided)
     if (nfcCode) {
-      const existingNFC = await prisma.user.findFirst({
-        where: { nfcCode }
-      })
+      const { data: existingNFC } = await supabase
+        .from(TABLES.USERS)
+        .select('id')
+        .eq('nfcCode', nfcCode)
+        .single()
+
       if (existingNFC) {
         return NextResponse.json(
           { error: 'NFC code already exists' }, 
@@ -85,24 +86,24 @@ export async function POST(request: NextRequest) {
     const hashedPin = await bcrypt.hash(pin, 10)
 
     // Create user
-    const createdUser = await prisma.user.create({
-      data: {
+    const { data: createdUser, error } = await supabase
+      .from(TABLES.USERS)
+      .insert({
         name,
         pin: hashedPin,
-        role: role,
+        role,
         nfcCode: nfcCode || null,
-        isActive: true
-      },
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        nfcCode: true,
         isActive: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    })
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      })
+      .select('id, name, role, nfcCode, isActive, createdAt, updatedAt')
+      .single()
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+    }
 
     return NextResponse.json(createdUser, { status: 201 })
   } catch (error) {

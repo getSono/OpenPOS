@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { supabase, TABLES } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,10 +17,13 @@ export async function POST(request: NextRequest) {
     const receiptNumber = `RCP-${Date.now()}-${Math.floor(Math.random() * 1000)}`
     
     // Get the next order number by finding the highest existing order number
-    const latestTransaction = await prisma.transaction.findFirst({
-      orderBy: { orderNumber: 'desc' },
-      select: { orderNumber: true }
-    })
+    const { data: latestTransaction } = await supabase
+      .from(TABLES.TRANSACTIONS)
+      .select('orderNumber')
+      .order('orderNumber', { ascending: false })
+      .limit(1)
+      .single()
+
     const orderNumber = (latestTransaction?.orderNumber || 99) + 1
 
     // Calculate subtotal and discount
@@ -32,83 +35,114 @@ export async function POST(request: NextRequest) {
     const discount = discountCode ? discountCode.discountAmount : 0
     const tax = 0 // For now, we'll assume no tax
 
-    // Create transaction with items in a transaction
-    const result = await prisma.$transaction(async (tx: any) => {
-      // Insert transaction
-      const transaction = await tx.transaction.create({
-        data: {
-          receiptNumber,
-          orderNumber,
-          subtotal,
-          tax,
-          discount,
-          total,
-          paymentMethod: paymentMethod,
-          status: 'COMPLETED',
-          orderStatus: 'PENDING',
-          userId: 'user1', // TODO: Get from authenticated user session
-          customerId: customerId || null,
-          workerId: null,
-          discountCodeId: discountCode?.id || null,
-          amountPaid,
-          changeAmount
-        }
+    // Create transaction
+    const { data: transaction, error: transactionError } = await supabase
+      .from(TABLES.TRANSACTIONS)
+      .insert({
+        receiptNumber,
+        orderNumber,
+        subtotal,
+        tax,
+        discount,
+        total,
+        paymentMethod: paymentMethod,
+        status: 'COMPLETED',
+        orderStatus: 'PENDING',
+        userId: 'user1', // TODO: Get from authenticated user session
+        customerId: customerId || null,
+        workerId: null,
+        discountCodeId: discountCode?.id || null,
+        amountPaid,
+        changeAmount,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      })
+      .select('*')
+      .single()
+
+    if (transactionError) {
+      console.error('Transaction creation error:', transactionError)
+      return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
+    }
+
+    // Insert transaction items and update stock
+    for (const item of items) {
+      // Insert transaction item
+      const { error: itemError } = await supabase
+        .from(TABLES.TRANSACTION_ITEMS)
+        .insert({
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.unitPrice * item.quantity,
+          transactionId: transaction.id,
+          productId: item.productId
+        })
+
+      if (itemError) {
+        console.error('Transaction item creation error:', itemError)
+        continue // Continue with other items
+      }
+
+      // Update product stock
+      const { error: stockError } = await supabase.rpc('decrement_product_stock', {
+        product_id: item.productId,
+        quantity: item.quantity
       })
 
-      // Insert transaction items and update stock
-      for (const item of items) {
-        await tx.transactionItem.create({
-          data: {
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.unitPrice * item.quantity,
-            transactionId: transaction.id,
-            productId: item.productId
-          }
-        })
+      // If RPC doesn't exist, update manually
+      if (stockError) {
+        const { data: product } = await supabase
+          .from(TABLES.PRODUCTS)
+          .select('stock')
+          .eq('id', item.productId)
+          .single()
 
-        // Update product stock
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: {
-              decrement: item.quantity
-            }
-          }
-        })
-      }
-
-      // Update discount code usage if discount was applied
-      if (discountCode) {
-        await tx.discountCode.update({
-          where: { id: discountCode.id },
-          data: {
-            currentUses: {
-              increment: 1
-            }
-          }
-        })
-      }
-
-      return transaction
-    })
-
-    // Get the created transaction with items
-    const transactionWithItems = await prisma.transaction.findUnique({
-      where: { id: result.id },
-      include: {
-        items: {
-          include: {
-            product: {
-              select: {
-                name: true,
-                price: true
-              }
-            }
-          }
+        if (product) {
+          await supabase
+            .from(TABLES.PRODUCTS)
+            .update({ 
+              stock: product.stock - item.quantity,
+              updatedAt: new Date().toISOString()
+            })
+            .eq('id', item.productId)
         }
       }
-    })
+    }
+
+    // Update discount code usage if discount was applied
+    if (discountCode) {
+      const { data: discountData } = await supabase
+        .from(TABLES.DISCOUNT_CODES)
+        .select('currentUses')
+        .eq('id', discountCode.id)
+        .single()
+
+      if (discountData) {
+        await supabase
+          .from(TABLES.DISCOUNT_CODES)
+          .update({ 
+            currentUses: discountData.currentUses + 1,
+            updatedAt: new Date().toISOString()
+          })
+          .eq('id', discountCode.id)
+      }
+    }
+
+    // Get the created transaction with items
+    const { data: transactionWithItems } = await supabase
+      .from(TABLES.TRANSACTIONS)
+      .select(`
+        *,
+        items:transaction_items (
+          *,
+          product:products (
+            name,
+            price
+          )
+        )
+      `)
+      .eq('id', transaction.id)
+      .single()
 
     return NextResponse.json(transactionWithItems, { status: 201 })
   } catch (error) {
@@ -119,28 +153,27 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const transactions = await prisma.transaction.findMany({
-      take: 50,
-      orderBy: {
-        createdAt: 'desc'
-      },
-      include: {
-        user: {
-          select: {
-            name: true
-          }
-        },
-        items: {
-          include: {
-            product: {
-              select: {
-                name: true
-              }
-            }
-          }
-        }
-      }
-    })
+    const { data: transactions, error } = await supabase
+      .from(TABLES.TRANSACTIONS)
+      .select(`
+        *,
+        user:users (
+          name
+        ),
+        items:transaction_items (
+          *,
+          product:products (
+            name
+          )
+        )
+      `)
+      .order('createdAt', { ascending: false })
+      .limit(50)
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
+    }
 
     return NextResponse.json(transactions)
   } catch (error) {
