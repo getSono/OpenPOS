@@ -22,7 +22,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
     }
 
-    return NextResponse.json(products)
+    // Transform the data to parse customFields if they exist
+    const formattedProducts = products.map(product => ({
+      ...product,
+      customFields: product.customFields ? JSON.parse(product.customFields) : {}
+    }))
+
+    return NextResponse.json(formattedProducts)
   } catch (error) {
     console.error('Failed to fetch products:', error)
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
@@ -47,6 +53,7 @@ export async function POST(request: NextRequest) {
       minStock: parseInt(data.minStock) || 0,
       categoryId: data.categoryId,
       image: data.image,
+      customFields: JSON.stringify(data.customFields || {}),
       isActive: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -68,7 +75,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })
     }
 
-    return NextResponse.json(product, { status: 201 })
+    // Parse customFields before returning
+    const formattedProduct = {
+      ...product,
+      customFields: product.customFields ? JSON.parse(product.customFields) : {}
+    }
+
+    return NextResponse.json(formattedProduct, { status: 201 })
   } catch (error) {
     console.error('Failed to create product:', error)
     return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })

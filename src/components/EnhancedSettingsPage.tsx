@@ -19,17 +19,41 @@ import {
   Plus,
   ArrowLeft,
   Save,
-  FileText
+  FileText,
+  Wrench
 } from 'lucide-react'
+
+interface CustomField {
+  id: string
+  name: string
+  label: string
+  type: 'text' | 'number' | 'select' | 'boolean'
+  options?: string[]
+  isRequired?: boolean
+}
 
 interface Product {
   id: string
   name: string
+  description?: string
   price: number
+  cost?: number
+  sku?: string
   barcode?: string
   category: { name: string }
+  categoryId: string
   stock: number
+  minStock: number
+  image?: string
   isActive: boolean
+  customFields?: Record<string, any>
+}
+
+interface Category {
+  id: string
+  name: string
+  description?: string
+  color?: string
 }
 
 interface User {
@@ -63,12 +87,14 @@ interface ReceiptSettings {
   website?: string
 }
 
-interface SettingsPageProps {
+interface EnhancedSettingsPageProps {
   onBack: () => void
 }
 
-export default function SettingsPage({ onBack }: SettingsPageProps) {
+export default function EnhancedSettingsPage({ onBack }: EnhancedSettingsPageProps) {
   const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [customFields, setCustomFields] = useState<CustomField[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>([])
   const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>({
@@ -95,6 +121,20 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
         setProducts(productsData)
       }
 
+      // Fetch categories
+      const categoriesResponse = await fetch('/api/categories')
+      if (categoriesResponse.ok) {
+        const categoriesData = await categoriesResponse.json()
+        setCategories(categoriesData)
+      }
+
+      // Fetch custom fields
+      const customFieldsResponse = await fetch('/api/custom-fields')
+      if (customFieldsResponse.ok) {
+        const customFieldsData = await customFieldsResponse.json()
+        setCustomFields(customFieldsData)
+      }
+
       // Fetch users
       const usersResponse = await fetch('/api/users')
       if (usersResponse.ok) {
@@ -103,7 +143,6 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
       }
 
       // For now, we'll use mock data for discount codes
-      // since the API endpoints don't exist yet
       setDiscountCodes([
         { id: '1', code: 'SAVE10', name: '10% Off', type: 'PERCENTAGE', value: 10, isActive: true, maxUses: 100, currentUses: 5 },
         { id: '2', code: 'WELCOME5', name: 'Welcome $5 Off', type: 'FIXED_AMOUNT', value: 5, isActive: true, maxUses: 50, currentUses: 12 },
@@ -123,14 +162,49 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   }
 
   const handleSaveProduct = async (product: Partial<Product>) => {
-    // TODO: Implement product save API call
-    console.log('Saving product:', product)
-    setEditingProduct(null)
+    try {
+      const method = editingProduct?.id ? 'PUT' : 'POST'
+      const url = editingProduct?.id ? `/api/products/${editingProduct.id}` : '/api/products'
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(product),
+      })
+
+      if (response.ok) {
+        await fetchData() // Refresh the product list
+        setEditingProduct(null)
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error saving product:', error)
+      alert('Failed to save product')
+    }
   }
 
   const handleDeleteProduct = async (id: string) => {
-    // TODO: Implement product delete API call
-    console.log('Deleting product:', id)
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/products/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        await fetchData() // Refresh the product list
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error)
+      alert('Failed to delete product')
+    }
   }
 
   const handleSaveUser = async (user: Partial<User & { pin: string }>) => {
@@ -201,63 +275,230 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
     }
   }
 
-  const ProductForm = ({ product, onSave, onCancel }: { 
+  const EnhancedProductForm = ({ product, onSave, onCancel }: { 
     product?: Product | null, 
     onSave: (product: Partial<Product>) => void,
     onCancel: () => void 
   }) => {
     const [formData, setFormData] = useState({
       name: product?.name || '',
+      description: product?.description || '',
       price: product?.price || 0,
+      cost: product?.cost || 0,
+      sku: product?.sku || '',
       barcode: product?.barcode || '',
       stock: product?.stock || 0,
+      minStock: product?.minStock || 0,
+      categoryId: product?.categoryId || '',
+      image: product?.image || '',
+      customFields: product?.customFields || {}
     })
 
+    const handleCustomFieldChange = (fieldName: string, value: any) => {
+      setFormData(prev => ({
+        ...prev,
+        customFields: {
+          ...prev.customFields,
+          [fieldName]: value
+        }
+      }))
+    }
+
     return (
-      <Card>
+      <Card className="max-w-4xl">
         <CardHeader>
           <CardTitle>{product ? 'Edit Product' : 'Add Product'}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Basic Information</h3>
+              
+              <div>
+                <Label htmlFor="name">Product Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Enter product name"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Product description"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="sku">SKU</Label>
+                <Input
+                  id="sku"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  placeholder="Product SKU"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="barcode">Barcode</Label>
+                <Input
+                  id="barcode"
+                  value={formData.barcode}
+                  onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                  placeholder="Product barcode"
+                />
+              </div>
+            </div>
+
+            {/* Pricing & Inventory */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Pricing & Inventory</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="price">Price *</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cost">Cost</Label>
+                  <Input
+                    id="cost"
+                    type="number"
+                    step="0.01"
+                    value={formData.cost}
+                    onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="stock">Current Stock</Label>
+                  <Input
+                    id="stock"
+                    type="number"
+                    value={formData.stock}
+                    onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="minStock">Minimum Stock</Label>
+                  <Input
+                    id="minStock"
+                    type="number"
+                    value={formData.minStock}
+                    onChange={(e) => setFormData({ ...formData, minStock: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="category">Category *</Label>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="price">Price</Label>
-            <Input
-              id="price"
-              type="number"
-              step="0.01"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
-            />
-          </div>
-          <div>
-            <Label htmlFor="barcode">Barcode</Label>
-            <Input
-              id="barcode"
-              value={formData.barcode}
-              onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label htmlFor="stock">Stock</Label>
-            <Input
-              id="stock"
-              type="number"
-              value={formData.stock}
-              onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
-            />
-          </div>
+
+          {/* Custom Fields */}
+          {customFields.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Custom Fields</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {customFields.map((field) => (
+                  <div key={field.id}>
+                    <Label htmlFor={field.name}>
+                      {field.label}
+                      {field.isRequired && <span className="text-red-500 ml-1">*</span>}
+                    </Label>
+                    {field.type === 'text' && (
+                      <Input
+                        id={field.name}
+                        value={formData.customFields[field.name] || ''}
+                        onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
+                        placeholder={`Enter ${field.label.toLowerCase()}`}
+                        required={field.isRequired}
+                      />
+                    )}
+                    {field.type === 'number' && (
+                      <Input
+                        id={field.name}
+                        type="number"
+                        value={formData.customFields[field.name] || ''}
+                        onChange={(e) => handleCustomFieldChange(field.name, parseFloat(e.target.value) || '')}
+                        placeholder={`Enter ${field.label.toLowerCase()}`}
+                        required={field.isRequired}
+                      />
+                    )}
+                    {field.type === 'select' && (
+                      <Select
+                        value={formData.customFields[field.name] || ''}
+                        onValueChange={(value) => handleCustomFieldChange(field.name, value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {field.options?.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    {field.type === 'boolean' && (
+                      <div className="flex items-center space-x-2 mt-2">
+                        <input
+                          type="checkbox"
+                          id={field.name}
+                          checked={formData.customFields[field.name] || false}
+                          onChange={(e) => handleCustomFieldChange(field.name, e.target.checked)}
+                        />
+                        <Label htmlFor={field.name}>Yes</Label>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex space-x-2">
-            <Button onClick={() => onSave(formData)}>
+            <Button onClick={() => onSave(formData)} disabled={!formData.name || !formData.categoryId}>
               <Save className="w-4 h-4 mr-2" />
-              Save
+              Save Product
             </Button>
             <Button variant="outline" onClick={onCancel}>
               Cancel
@@ -469,7 +710,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
       {/* Content */}
       <div className="p-6">
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Package className="w-4 h-4" />
               Products
@@ -486,12 +727,16 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
               <FileText className="w-4 h-4" />
               Receipt Settings
             </TabsTrigger>
+            <TabsTrigger value="custom-fields" className="flex items-center gap-2">
+              <Wrench className="w-4 h-4" />
+              Custom Fields
+            </TabsTrigger>
           </TabsList>
 
           {/* Products Tab */}
           <TabsContent value="products" className="space-y-6">
             {editingProduct !== null ? (
-              <ProductForm 
+              <EnhancedProductForm 
                 product={editingProduct}
                 onSave={handleSaveProduct}
                 onCancel={() => setEditingProduct(null)}
@@ -511,9 +756,11 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Name</TableHead>
+                          <TableHead>SKU</TableHead>
                           <TableHead>Price</TableHead>
-                          <TableHead>Barcode</TableHead>
+                          <TableHead>Cost</TableHead>
                           <TableHead>Stock</TableHead>
+                          <TableHead>Min Stock</TableHead>
                           <TableHead>Category</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Actions</TableHead>
@@ -523,9 +770,11 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
                         {products.map((product) => (
                           <TableRow key={product.id}>
                             <TableCell className="font-medium">{product.name}</TableCell>
+                            <TableCell>{product.sku || 'N/A'}</TableCell>
                             <TableCell>${product.price.toFixed(2)}</TableCell>
-                            <TableCell>{product.barcode || 'N/A'}</TableCell>
+                            <TableCell>${(product.cost || 0).toFixed(2)}</TableCell>
                             <TableCell>{product.stock}</TableCell>
+                            <TableCell>{product.minStock}</TableCell>
                             <TableCell>{product.category.name}</TableCell>
                             <TableCell>
                               <Badge variant={product.isActive ? 'default' : 'secondary'}>
@@ -715,6 +964,65 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
               settings={receiptSettings}
               onSave={handleSaveReceiptSettings}
             />
+          </TabsContent>
+
+          {/* Custom Fields Tab */}
+          <TabsContent value="custom-fields" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Custom Fields</h2>
+              <Button onClick={() => console.log('Add custom field')}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Custom Field
+              </Button>
+            </div>
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Label</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Required</TableHead>
+                      <TableHead>Options</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customFields.map((field) => (
+                      <TableRow key={field.id}>
+                        <TableCell className="font-mono">{field.name}</TableCell>
+                        <TableCell>{field.label}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{field.type}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={field.isRequired ? 'destructive' : 'secondary'}>
+                            {field.isRequired ? 'Required' : 'Optional'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {field.type === 'select' && field.options ? 
+                            field.options.slice(0, 3).join(', ') + (field.options.length > 3 ? '...' : '') :
+                            'N/A'
+                          }
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button variant="outline" size="sm">
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
