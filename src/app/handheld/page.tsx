@@ -82,7 +82,7 @@ export default function HandheldPage() {
 
   // Handle barcode detection from camera
   const handleBarcodeDetected = useCallback(async (barcode: string) => {
-    if (isScanning) return // Prevent multiple rapid scans
+    if (isScanning || !barcode || barcode.length < 3) return // Prevent multiple rapid scans and invalid barcodes
     
     setIsScanning(true)
     setBarcodeInput(barcode)
@@ -94,10 +94,10 @@ export default function HandheldPage() {
       if (response.ok) {
         const product = await response.json()
         setScannedProducts(prev => [product, ...prev.slice(0, 9)]) // Keep last 10
-        setLastAction(`Camera scanned: ${product.name}`)
+        setLastAction(`✅ Camera scanned: ${product.name}`)
         
         // Add to main POS cart with complete product data
-        await fetch('/api/cart/add', {
+        const cartResponse = await fetch('/api/cart/add', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -106,18 +106,23 @@ export default function HandheldPage() {
             product: product
           })
         })
+        
+        if (!cartResponse.ok) {
+          setLastAction(`⚠️ Product scanned but cart sync failed: ${product.name}`)
+        }
       } else {
-        setLastAction(`Camera detected barcode: ${barcode} - Product not found`)
+        setLastAction(`❌ Camera detected barcode: ${barcode} - Product not found`)
       }
     } catch (error) {
-      setLastAction(`Camera scan error for: ${barcode}`)
+      console.error('Camera scan error:', error)
+      setLastAction(`❌ Camera scan error for: ${barcode}`)
     }
     
-    // Reset scanning state after a delay to allow for new scans
+    // Reset scanning state after a longer delay to prevent rapid re-scanning
     setTimeout(() => {
       setIsScanning(false)
       setBarcodeInput('')
-    }, 2000)
+    }, 3000) // Increased to 3 seconds to prevent rapid re-scanning of same barcode
   }, [isScanning])
 
   // Listen for hardware scanner input
@@ -135,30 +140,58 @@ export default function HandheldPage() {
   // Camera functions
   const startCamera = useCallback(async () => {
     try {
+      // Reset any existing barcode reader
+      if (codeReader.current) {
+        try {
+          codeReader.current.reset()
+        } catch (resetError) {
+          console.warn('Error resetting barcode reader:', resetError)
+        }
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
       })
+      
       if (videoRef.current && codeReader.current) {
         videoRef.current.srcObject = stream
-        // Ensure the video plays
-        try {
-          await videoRef.current.play()
-        } catch (playError) {
-          console.warn('Video autoplay failed:', playError)
-        }
-        setIsCameraActive(true)
-        setLastAction('Camera started - point at barcode to scan')
         
-        // Start barcode detection
-        try {
-          codeReader.current.decodeFromVideoDevice(null, videoRef.current, (result, error) => {
-            if (result) {
-              handleBarcodeDetected(result.getText())
+        // Wait for video metadata to load before starting detection
+        videoRef.current.onloadedmetadata = async () => {
+          try {
+            await videoRef.current?.play()
+            setIsCameraActive(true)
+            setLastAction('Camera started - point at barcode to scan')
+            
+            // Start barcode detection with better error handling
+            try {
+              await codeReader.current?.decodeFromVideoDevice(null, videoRef.current, (result, error) => {
+                if (result && result.getText()) {
+                  handleBarcodeDetected(result.getText())
+                }
+                // Only log errors that are not "normal" scanning errors
+                if (error && !error.message?.includes('No MultiFormat Readers')) {
+                  console.debug('Barcode scanning:', error.message)
+                }
+              })
+            } catch (barcodeError) {
+              console.error('Barcode detection setup failed:', barcodeError)
+              setLastAction('Barcode detection failed - using manual input only')
             }
-            // Ignore errors as they're normal when no barcode is visible
-          })
-        } catch (barcodeError) {
-          console.warn('Barcode detection setup failed:', barcodeError)
+          } catch (playError) {
+            console.error('Video play failed:', playError)
+            setLastAction('Camera preview failed to start')
+          }
+        }
+        
+        // Handle video loading errors
+        videoRef.current.onerror = (error) => {
+          console.error('Video error:', error)
+          setLastAction('Camera video error occurred')
         }
       }
     } catch (error) {
@@ -178,6 +211,7 @@ export default function HandheldPage() {
       }
       
       setLastAction(errorMessage)
+      setCameraSupported(false)
     }
   }, [handleBarcodeDetected])
 
@@ -259,14 +293,60 @@ export default function HandheldPage() {
 
     setNfcScanning(true)
     try {
-      // For demo purposes, we'll use the NFC code as a product lookup
-      // In reality, NFC tags would contain product information or IDs
-      const productId = nfcInput.replace('NFC', 'PROD') // Convert NFC001 to PROD001 etc.
-      
-      const response = await fetch(`/api/products/barcode/${productId}`)
-      
-      if (response.ok) {
-        const product = await response.json()
+      // NFC product scanning logic - try multiple approaches
+      let response;
+      let product = null;
+
+      // First, try to find product by the NFC code as barcode
+      try {
+        response = await fetch(`/api/products/barcode/${nfcInput}`)
+        if (response.ok) {
+          product = await response.json()
+        }
+      } catch (error) {
+        console.debug('NFC code not found as barcode:', nfcInput)
+      }
+
+      // If not found, try mapping NFC codes to known product barcodes
+      if (!product) {
+        const nfcToProductMap: { [key: string]: string } = {
+          'NFC001': '1234567890123', // Maps to Coca Cola
+          'NFC002': '1234567890128', // Maps to Energy Bar  
+          'NFC003': '1234567890124', // Maps to Pepsi
+          'NFCP01': '1234567890123', // Alternative mapping
+          'NFCP02': '1234567890128',
+          'NFCP03': '1234567890124'
+        }
+
+        const mappedBarcode = nfcToProductMap[nfcInput.toUpperCase()]
+        if (mappedBarcode) {
+          try {
+            response = await fetch(`/api/products/barcode/${mappedBarcode}`)
+            if (response.ok) {
+              product = await response.json()
+            }
+          } catch (error) {
+            console.debug('Mapped barcode not found:', mappedBarcode)
+          }
+        }
+      }
+
+      // If still not found, try finding by product name containing the NFC code
+      if (!product) {
+        // For demo purposes, create a virtual product for unknown NFC codes
+        if (nfcInput.startsWith('NFC') || nfcInput.startsWith('nfc')) {
+          product = {
+            id: `nfc-${Date.now()}`,
+            name: `NFC Product ${nfcInput}`,
+            price: 9.99,
+            barcode: nfcInput,
+            stock: 1,
+            category: { name: 'NFC Items' }
+          }
+        }
+      }
+
+      if (product) {
         setScannedProducts(prev => [product, ...prev.slice(0, 9)]) // Keep last 10
         setLastAction(`NFC Scanned: ${product.name}`)
         
@@ -281,11 +361,11 @@ export default function HandheldPage() {
           })
         })
       } else {
-        // If no product found, try to find a matching product by name
-        setLastAction('NFC tag scanned - no matching product found')
+        setLastAction(`NFC code ${nfcInput} scanned - no matching product found`)
       }
     } catch (error) {
-      setLastAction('NFC scan error')
+      console.error('NFC scan error:', error)
+      setLastAction('NFC scan error occurred')
     }
     
     setNfcInput('')
@@ -296,9 +376,13 @@ export default function HandheldPage() {
     if ('NDEFReader' in window) {
       try {
         setNfcScanning(true)
+        setLastAction('Starting NFC scanning...')
+        
         // @ts-expect-error - NDEFReader is not fully typed in TypeScript yet
         const ndef = new NDEFReader()
         await ndef.scan()
+        
+        setLastAction('NFC scanning active - tap an NFC tag')
         
         ndef.addEventListener('reading', ({ message }: { message: { records: Array<{ recordType: string; data: ArrayBuffer }> } }) => {
           const decoder = new TextDecoder()
@@ -306,23 +390,48 @@ export default function HandheldPage() {
             if (record.recordType === 'text') {
               const nfcCode = decoder.decode(record.data)
               setNfcInput(nfcCode)
-              handleNFCProductScan()
+              setLastAction(`NFC tag detected: ${nfcCode}`)
+              // Automatically trigger product scan
+              setTimeout(() => {
+                handleNFCProductScan()
+              }, 100)
               return
             }
           }
+          setLastAction('NFC tag read but no text data found')
         })
         
-        ndef.addEventListener('readingerror', () => {
+        ndef.addEventListener('readingerror', (error: any) => {
+          console.error('NFC reading error:', error)
           setLastAction('NFC reading error occurred')
           setNfcScanning(false)
         })
         
+        // Auto-stop scanning after 30 seconds
+        setTimeout(() => {
+          if (nfcScanning) {
+            setNfcScanning(false)
+            setLastAction('NFC scanning timeout - use manual entry')
+          }
+        }, 30000)
+        
       } catch (error) {
-        setLastAction('Failed to start NFC scanning')
+        console.error('NFC scan error:', error)
+        let errorMessage = 'Failed to start NFC scanning'
+        
+        if (error instanceof Error) {
+          if (error.name === 'NotAllowedError') {
+            errorMessage = 'NFC permission denied - please allow NFC access'
+          } else if (error.name === 'NotSupportedError') {
+            errorMessage = 'NFC not supported on this device'
+          }
+        }
+        
+        setLastAction(errorMessage)
         setNfcScanning(false)
       }
     } else {
-      setLastAction('NFC not supported on this device')
+      setLastAction('NFC not supported on this device - use manual entry')
     }
   }
 
@@ -472,23 +581,36 @@ export default function HandheldPage() {
                       
                       {isCameraActive ? (
                         <div className="space-y-2">
-                          <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            muted
-                            className="w-full h-48 bg-gray-800 rounded-lg border border-white/20 object-cover"
-                            onLoadedMetadata={() => {
-                              // Ensure video plays when metadata is loaded
-                              if (videoRef.current) {
-                                videoRef.current.play().catch(console.warn)
-                              }
-                            }}
-                          />
+                          <div className="relative">
+                            <video
+                              ref={videoRef}
+                              autoPlay
+                              playsInline
+                              muted
+                              className="w-full h-48 bg-gray-800 rounded-lg border border-white/20 object-cover"
+                              onLoadedMetadata={() => {
+                                // Ensure video plays when metadata is loaded
+                                if (videoRef.current) {
+                                  videoRef.current.play().catch(console.warn)
+                                }
+                              }}
+                              onError={(e) => {
+                                console.error('Video error:', e)
+                                setLastAction('Camera video error - try stopping and starting again')
+                              }}
+                            />
+                            {isScanning && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
+                                <div className="bg-green-500/80 text-white px-3 py-1 rounded-full text-sm font-medium">
+                                  🔍 Scanning...
+                                </div>
+                              </div>
+                            )}
+                          </div>
                           <p className="text-xs text-center text-gray-300">
                             {isScanning 
-                              ? '🔍 Scanning barcode...' 
-                              : 'Point camera at barcode - automatic detection enabled'
+                              ? '🔍 Processing barcode...' 
+                              : '📱 Point camera at barcode - automatic detection active'
                             }
                           </p>
                         </div>
@@ -603,8 +725,13 @@ export default function HandheldPage() {
                       </div>
                       
                       <div className="p-3 rounded-lg bg-green-500/20 border border-green-400/30">
+                        <p className="text-xs text-green-200 mb-1">
+                          <strong>Test NFC product codes:</strong>
+                        </p>
                         <p className="text-xs text-green-200">
-                          Test NFC codes: NFC001, NFC002, NFC003
+                          • NFC001 → Coca Cola 330ml ($1.50)<br/>
+                          • NFC002 → Energy Bar ($3.50)<br/>
+                          • NFC003 → Pepsi 330ml ($1.45)
                         </p>
                       </div>
                     </div>
