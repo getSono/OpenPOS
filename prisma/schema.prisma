@@ -187,3 +187,20 @@ enum DiscountType {
   PERCENTAGE
   FIXED_AMOUNT
 }
+
+model ReceiptSettings {
+  id            String   @id @default(cuid())
+  businessName  String   @default("OpenPOS")
+  headerText    String?
+  footerText    String   @default("Thank you for shopping with us!")
+  logoUrl       String?
+  address       String?
+  phone         String?
+  email         String?
+  website       String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("receipt_settings")
+}

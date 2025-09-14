@@ -138,10 +138,25 @@ async function main() {
     })
   ])
 
+  // Create default receipt settings
+  const receiptSettings = await prisma.receiptSettings.create({
+    data: {
+      businessName: 'OpenPOS',
+      headerText: 'Modern Point of Sale System',
+      footerText: 'Thank you for shopping with us!',
+      address: '123 Main Street, Anytown, ST 12345',
+      phone: '(555) 123-4567',
+      email: 'info@openpos.com',
+      website: 'www.openpos.com',
+      isActive: true
+    }
+  })
+
   console.log('Seeded database with:')
   console.log(`- ${categories.length} categories`)
   console.log(`- ${users.length} users`)
   console.log(`- ${products.length} products`)
+  console.log(`- Default receipt settings created`)
   console.log('\nTest users:')
   console.log('Admin: PIN 1234 | NFC NFC001')
   console.log('Manager: PIN 5678 | NFC NFC002')

@@ -18,7 +18,8 @@ import {
   Trash2, 
   Plus,
   ArrowLeft,
-  Save
+  Save,
+  FileText
 } from 'lucide-react'
 
 interface Product {
@@ -50,6 +51,18 @@ interface DiscountCode {
   currentUses: number
 }
 
+interface ReceiptSettings {
+  id?: string
+  businessName: string
+  headerText?: string
+  footerText: string
+  logoUrl?: string
+  address?: string
+  phone?: string
+  email?: string
+  website?: string
+}
+
 interface SettingsPageProps {
   onBack: () => void
 }
@@ -58,6 +71,10 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>([])
+  const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>({
+    businessName: "OpenPOS",
+    footerText: "Thank you for shopping with us!"
+  })
   const [loading, setLoading] = useState(true)
 
   // Form states
@@ -91,6 +108,13 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
         { id: '1', code: 'SAVE10', name: '10% Off', type: 'PERCENTAGE', value: 10, isActive: true, maxUses: 100, currentUses: 5 },
         { id: '2', code: 'WELCOME5', name: 'Welcome $5 Off', type: 'FIXED_AMOUNT', value: 5, isActive: true, maxUses: 50, currentUses: 12 },
       ])
+
+      // Fetch receipt settings
+      const receiptResponse = await fetch('/api/receipt-settings')
+      if (receiptResponse.ok) {
+        const receiptData = await receiptResponse.json()
+        setReceiptSettings(receiptData)
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {
@@ -152,6 +176,28 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
     } catch (error) {
       console.error('Error deleting user:', error)
       alert('Failed to delete user')
+    }
+  }
+
+  const handleSaveReceiptSettings = async (settings: ReceiptSettings) => {
+    try {
+      const response = await fetch('/api/receipt-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      })
+
+      if (response.ok) {
+        const updatedSettings = await response.json()
+        setReceiptSettings(updatedSettings)
+        alert('Receipt settings saved successfully!')
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error saving receipt settings:', error)
+      alert('Failed to save receipt settings')
     }
   }
 
@@ -423,7 +469,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
       {/* Content */}
       <div className="p-6">
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Package className="w-4 h-4" />
               Products
@@ -435,6 +481,10 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
             <TabsTrigger value="discounts" className="flex items-center gap-2">
               <Ticket className="w-4 h-4" />
               Discount Codes
+            </TabsTrigger>
+            <TabsTrigger value="receipts" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Receipt Settings
             </TabsTrigger>
           </TabsList>
 
@@ -658,8 +708,220 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
               </>
             )}
           </TabsContent>
+
+          {/* Receipt Settings Tab */}
+          <TabsContent value="receipts" className="space-y-6">
+            <ReceiptSettingsForm 
+              settings={receiptSettings}
+              onSave={handleSaveReceiptSettings}
+            />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
+  )
+}
+
+// Receipt Settings Form Component
+interface ReceiptSettingsFormProps {
+  settings: ReceiptSettings
+  onSave: (settings: ReceiptSettings) => void
+}
+
+function ReceiptSettingsForm({ settings, onSave }: ReceiptSettingsFormProps) {
+  const [formData, setFormData] = useState<ReceiptSettings>(settings)
+
+  useEffect(() => {
+    setFormData(settings)
+  }, [settings])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave(formData)
+  }
+
+  const handleInputChange = (field: keyof ReceiptSettings, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Receipt Settings</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Business Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Business Information</h3>
+              
+              <div>
+                <Label htmlFor="businessName">Business Name *</Label>
+                <Input
+                  id="businessName"
+                  value={formData.businessName}
+                  onChange={(e) => handleInputChange('businessName', e.target.value)}
+                  placeholder="Your business name"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  value={formData.address || ''}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  placeholder="123 Main St, City, State 12345"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone || ''}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email || ''}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  placeholder="info@yourbusiness.com"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  value={formData.website || ''}
+                  onChange={(e) => handleInputChange('website', e.target.value)}
+                  placeholder="www.yourbusiness.com"
+                />
+              </div>
+            </div>
+
+            {/* Receipt Customization */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Receipt Customization</h3>
+              
+              <div>
+                <Label htmlFor="headerText">Header Text</Label>
+                <Input
+                  id="headerText"
+                  value={formData.headerText || ''}
+                  onChange={(e) => handleInputChange('headerText', e.target.value)}
+                  placeholder="Additional header text (optional)"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="footerText">Footer Text *</Label>
+                <Input
+                  id="footerText"
+                  value={formData.footerText}
+                  onChange={(e) => handleInputChange('footerText', e.target.value)}
+                  placeholder="Thank you message"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="logoUrl">Logo URL</Label>
+                <Input
+                  id="logoUrl"
+                  value={formData.logoUrl || ''}
+                  onChange={(e) => handleInputChange('logoUrl', e.target.value)}
+                  placeholder="https://example.com/logo.png"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Enter a URL to an image that will be displayed at the top of receipts
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Receipt Preview</h3>
+            <div className="bg-gray-50 p-4 border rounded-md font-mono text-sm max-w-md">
+              <div className="text-center mb-4">
+                {formData.logoUrl && (
+                  <div className="mb-2">
+                    <div className="w-16 h-16 bg-gray-200 mx-auto rounded flex items-center justify-center text-xs">
+                      LOGO
+                    </div>
+                  </div>
+                )}
+                <h4 className="font-bold text-lg">{formData.businessName || 'Your Business'}</h4>
+                {formData.headerText && (
+                  <p className="text-xs mt-1">{formData.headerText}</p>
+                )}
+                {formData.address && <p className="text-xs">{formData.address}</p>}
+                {formData.phone && <p className="text-xs">{formData.phone}</p>}
+                {formData.email && <p className="text-xs">{formData.email}</p>}
+              </div>
+              
+              <div className="border-b border-dashed border-gray-400 my-2"></div>
+              
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span>Receipt #:</span>
+                  <span>REC-001</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Order #:</span>
+                  <span className="font-bold">1</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Date:</span>
+                  <span>{new Date().toLocaleDateString()}</span>
+                </div>
+              </div>
+              
+              <div className="border-b border-dashed border-gray-400 my-2"></div>
+              
+              <div className="space-y-1">
+                <div className="font-medium">Sample Item</div>
+                <div className="flex justify-between text-xs">
+                  <span>1 x $5.00</span>
+                  <span>$5.00</span>
+                </div>
+              </div>
+              
+              <div className="border-b border-dashed border-gray-400 my-2"></div>
+              
+              <div className="flex justify-between font-bold">
+                <span>TOTAL:</span>
+                <span>$5.00</span>
+              </div>
+              
+              <div className="text-center mt-4 text-xs">
+                <p>{formData.footerText || 'Thank you for shopping with us!'}</p>
+                {formData.website && <p className="mt-1">{formData.website}</p>}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button type="submit" className="flex items-center gap-2">
+              <Save className="w-4 h-4" />
+              Save Receipt Settings
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
