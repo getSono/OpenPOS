@@ -1,6 +1,6 @@
 # OpenPOS - Modern Point of Sale System
 
-OpenPOS is a modern, web-based Point of Sale (POS) system built with Next.js, Prisma, and powered by Supabase PostgreSQL for enhanced scalability and performance.
+OpenPOS is a modern, web-based Point of Sale (POS) system built with Next.js and powered by Supabase for enhanced scalability and real-time performance.
 
 ## Features
 
@@ -11,13 +11,14 @@ OpenPOS is a modern, web-based Point of Sale (POS) system built with Next.js, Pr
 - 📊 **Real-time Updates** - Powered by Supabase for live data synchronization
 - 🔒 **Secure Authentication** - NFC and PIN-based user authentication
 
-## Database - Supabase PostgreSQL
+## Database - Supabase
 
-OpenPOS now runs exclusively on Supabase PostgreSQL, providing:
-- **Scalability**: Handle more transactions and users
+OpenPOS runs entirely on Supabase, providing:
+- **Scalability**: Handle more transactions and users seamlessly
 - **Real-time Updates**: Live data synchronization across devices
 - **Cloud Integration**: Built-in backup, monitoring, and security
 - **Advanced Features**: Row-level security, real-time subscriptions
+- **No ORM**: Direct database access with type-safe queries
 
 ## Getting Started
 
@@ -52,12 +53,12 @@ OpenPOS now runs exclusively on Supabase PostgreSQL, providing:
    
    Update `.env.local` with your Supabase credentials:
    ```
-   DATABASE_URL="postgresql://postgres:[password]@db.[project-id].supabase.co:5432/postgres"
    NEXT_PUBLIC_SUPABASE_URL="https://[project-id].supabase.co"
    NEXT_PUBLIC_SUPABASE_ANON_KEY="[your-anon-key]"
+   SUPABASE_SERVICE_ROLE_KEY="[your-service-role-key]"
    ```
 
-4. Initialize the database:
+4. Set up your Supabase database schema:
    ```bash
    npm run setup
    ```
@@ -73,16 +74,15 @@ OpenPOS now runs exclusively on Supabase PostgreSQL, providing:
 
 ### Available Scripts
 
-- `npm run setup` - Complete setup: schema + seed data
-- `npm run db:push` - Push schema to Supabase
-- `npm run db:seed` - Seed database with sample data
-- `npm run db:studio` - Open Prisma Studio for database management
-- `npm run db:migrate` - Create and apply migrations
-- `npm run db:reset` - Reset database (development only)
+- `npm run setup` - Complete Supabase setup: schema + seed data
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
 
 ### Default Test Users
 
-After running `npm run setup`, you can log in with:
+After setting up your Supabase database, you can create test users with:
 
 **Admin User:**
 - PIN: `1234` or NFC: `NFC001`
