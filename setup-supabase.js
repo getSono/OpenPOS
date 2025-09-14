@@ -53,10 +53,12 @@ async function setupSupabase() {
 }
 
 // Check if DATABASE_URL is configured
-if (!process.env.DATABASE_URL) {
+/* if (!process.env.DATABASE_URL) {
   console.error('❌ DATABASE_URL environment variable is not set!');
   console.error('Please copy .env.example to .env and configure your Supabase connection string.');
   process.exit(1);
-}
+} */
+
+// Run the setup
 
 setupSupabase();
