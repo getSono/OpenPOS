@@ -1,19 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
-
-interface DiscountCode {
-  id: string
-  code: string
-  name: string
-  type: 'PERCENTAGE' | 'FIXED_AMOUNT'
-  value: number
-  minAmount?: number
-  maxUses?: number
-  currentUses: number
-  isActive: boolean
-  validFrom: string
-  validUntil?: string
-}
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,10 +10,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the discount code
-    const discountCode = await db.get(`
-      SELECT * FROM discount_codes 
-      WHERE code = ? AND isActive = 1
-    `, [code.toUpperCase()]) as DiscountCode | undefined
+    const discountCode = await prisma.discountCode.findFirst({
+      where: {
+        code: code.toUpperCase(),
+        isActive: true
+      }
+    })
 
     if (!discountCode) {
       return NextResponse.json({ error: 'Invalid discount code' }, { status: 404 })
@@ -35,8 +23,8 @@ export async function POST(request: NextRequest) {
 
     // Check if discount code is still valid (date range)
     const now = new Date()
-    const validFrom = new Date(discountCode.validFrom)
-    const validUntil = discountCode.validUntil ? new Date(discountCode.validUntil) : null
+    const validFrom = discountCode.validFrom
+    const validUntil = discountCode.validUntil
 
     if (now < validFrom) {
       return NextResponse.json({ error: 'Discount code is not yet active' }, { status: 400 })

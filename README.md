@@ -1,6 +1,6 @@
 # OpenPOS - Modern Point of Sale System
 
-OpenPOS is a modern, web-based Point of Sale (POS) system built with Next.js, Prisma, and now powered by Supabase PostgreSQL for enhanced scalability and performance.
+OpenPOS is a modern, web-based Point of Sale (POS) system built with Next.js, Prisma, and powered by Supabase PostgreSQL for enhanced scalability and performance.
 
 ## Features
 
@@ -11,25 +11,20 @@ OpenPOS is a modern, web-based Point of Sale (POS) system built with Next.js, Pr
 - 📊 **Real-time Updates** - Powered by Supabase for live data synchronization
 - 🔒 **Secure Authentication** - NFC and PIN-based user authentication
 
-## Database Migration to Supabase
+## Database - Supabase PostgreSQL
 
-OpenPOS has been upgraded from SQLite to Supabase PostgreSQL for better performance, scalability, and cloud integration. See [MIGRATION.md](./MIGRATION.md) for detailed migration instructions.
-
-### Quick Migration Steps
-
-1. **Setup Supabase**: Create a project at [supabase.com](https://supabase.com)
-2. **Configure Environment**: Copy `.env.example` to `.env.local` and update with your Supabase credentials
-3. **Validate Setup**: `npm run db:validate-setup`
-4. **Backup Current Data**: `npm run db:backup`
-5. **Initialize Schema**: `npm run db:push`
-6. **Migrate Data**: `npm run db:migrate-to-supabase`
+OpenPOS now runs exclusively on Supabase PostgreSQL, providing:
+- **Scalability**: Handle more transactions and users
+- **Real-time Updates**: Live data synchronization across devices
+- **Cloud Integration**: Built-in backup, monitoring, and security
+- **Advanced Features**: Row-level security, real-time subscriptions
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+ and npm
-- Supabase account (for production) or existing SQLite setup (for development)
+- Supabase account ([create one free](https://supabase.com))
 
 ### Installation
 
@@ -44,10 +39,64 @@ OpenPOS has been upgraded from SQLite to Supabase PostgreSQL for better performa
    npm install
    ```
 
-3. Set up your database:
+3. Set up your Supabase database:
 
-   **For Supabase (Recommended):**
+   **Create your Supabase project:**
+   - Go to [supabase.com](https://supabase.com) and create a new project
+   - Copy your project URL and API keys
+
+   **Configure environment variables:**
    ```bash
+   cp .env.example .env.local
+   ```
+   
+   Update `.env.local` with your Supabase credentials:
+   ```
+   DATABASE_URL="postgresql://postgres:[password]@db.[project-id].supabase.co:5432/postgres"
+   NEXT_PUBLIC_SUPABASE_URL="https://[project-id].supabase.co"
+   NEXT_PUBLIC_SUPABASE_ANON_KEY="[your-anon-key]"
+   ```
+
+4. Initialize the database:
+   ```bash
+   npm run setup
+   ```
+
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+6. Open [http://localhost:3000](http://localhost:3000) to access OpenPOS
+
+## Database Management
+
+### Available Scripts
+
+- `npm run setup` - Complete setup: schema + seed data
+- `npm run db:push` - Push schema to Supabase
+- `npm run db:seed` - Seed database with sample data
+- `npm run db:studio` - Open Prisma Studio for database management
+- `npm run db:migrate` - Create and apply migrations
+- `npm run db:reset` - Reset database (development only)
+
+### Default Test Users
+
+After running `npm run setup`, you can log in with:
+
+**Admin User:**
+- PIN: `1234` or NFC: `NFC001`
+
+**Manager User:**
+- PIN: `5678` or NFC: `NFC002`
+
+**Cashier User:**
+- PIN: `9999` or NFC: `NFC003`
+
+**Workers (for kitchen stations):**
+- Kitchen Worker 1: NFC `WORKER001`
+- Kitchen Worker 2: NFC `WORKER002`
+- Prep Worker: NFC `WORKER003`
    # Copy environment template
    cp .env.example .env.local
    # Update .env.local with your Supabase credentials

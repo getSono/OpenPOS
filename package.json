@@ -6,14 +6,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "setup": "node setup-supabase.js",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:backup": "./scripts/backup-sqlite.sh",
-    "db:migrate-to-supabase": "tsx scripts/migrate-to-supabase.ts",
-    "db:validate-setup": "tsx scripts/validate-migration-setup.ts",
-    "test:migration": "./scripts/test-migration-system.sh"
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.16.1",
@@ -35,7 +35,6 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-webcam": "^7.2.0",
-    "sqlite3": "^5.1.7",
     "tailwind-merge": "^3.3.1",
     "ts-node": "^10.9.2"
   },

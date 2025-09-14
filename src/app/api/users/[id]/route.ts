@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 // GET /api/users/[id] - Get single user
@@ -9,11 +9,18 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const user = await db.get(`
-      SELECT id, name, role, nfcCode, isActive, createdAt, updatedAt
-      FROM users
-      WHERE id = ?
-    `, [id])
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        nfcCode: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    })
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -36,7 +43,10 @@ export async function PUT(
     const { name, pin, role, nfcCode, isActive } = await request.json()
 
     // Check if user exists
-    const existingUser = await db.get('SELECT id FROM users WHERE id = ?', [id]) as { id: string } | undefined
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true }
+    })
     if (!existingUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
@@ -50,14 +60,15 @@ export async function PUT(
     }
 
     // Validate role
-    if (!['ADMIN', 'MANAGER', 'CASHIER'].includes(role)) {
+    const validRoles = ['ADMIN', 'MANAGER', 'CASHIER']
+    if (!validRoles.includes(role)) {
       return NextResponse.json(
         { error: 'Invalid role. Must be ADMIN, MANAGER, or CASHIER' }, 
         { status: 400 }
       )
     }
 
-    let hashedPin = null
+    let hashedPin = undefined
     
     // If PIN is being updated, validate and hash it
     if (pin) {
@@ -69,10 +80,12 @@ export async function PUT(
       }
 
       // Check if PIN already exists (exclude current user)
-      const existingPin = await db.get(
-        'SELECT id FROM users WHERE pin = ? AND id != ?', 
-        [pin, id]
-      ) as { id: string } | undefined
+      const existingPin = await prisma.user.findFirst({
+        where: {
+          pin: pin,
+          NOT: { id: id }
+        }
+      })
       if (existingPin) {
         return NextResponse.json(
           { error: 'PIN already exists' }, 
@@ -85,10 +98,12 @@ export async function PUT(
 
     // Check if NFC code already exists (if provided and exclude current user)
     if (nfcCode) {
-      const existingNFC = await db.get(
-        'SELECT id FROM users WHERE nfcCode = ? AND id != ?', 
-        [nfcCode, id]
-      ) as { id: string } | undefined
+      const existingNFC = await prisma.user.findFirst({
+        where: {
+          nfcCode: nfcCode,
+          NOT: { id: id }
+        }
+      })
       if (existingNFC) {
         return NextResponse.json(
           { error: 'NFC code already exists' }, 
@@ -97,40 +112,38 @@ export async function PUT(
       }
     }
 
-    // Build update query dynamically
-    const updateFields = ['name = ?', 'role = ?', 'updatedAt = datetime(\'now\')']
-    const updateValues = [name, role]
+    // Build update data
+    const updateData: any = {
+      name,
+      role: role
+    }
 
     if (hashedPin) {
-      updateFields.push('pin = ?')
-      updateValues.push(hashedPin)
+      updateData.pin = hashedPin
     }
 
     if (nfcCode !== undefined) {
-      updateFields.push('nfcCode = ?')
-      updateValues.push(nfcCode || null)
+      updateData.nfcCode = nfcCode || null
     }
 
     if (isActive !== undefined) {
-      updateFields.push('isActive = ?')
-      updateValues.push(isActive)
+      updateData.isActive = isActive
     }
 
-    updateValues.push(id)
-
     // Update user
-    await db.run(`
-      UPDATE users 
-      SET ${updateFields.join(', ')}
-      WHERE id = ?
-    `, updateValues)
-
-    // Return updated user (without PIN)
-    const updatedUser = await db.get(`
-      SELECT id, name, role, nfcCode, isActive, createdAt, updatedAt
-      FROM users
-      WHERE id = ?
-    `, [id])
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        nfcCode: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    })
 
     return NextResponse.json(updatedUser)
   } catch (error) {
@@ -148,16 +161,18 @@ export async function DELETE(
     const { id } = await params
     
     // Check if user exists
-    const existingUser = await db.get('SELECT id, role FROM users WHERE id = ?', [id]) as { id: string; role: string } | undefined
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true }
+    })
     if (!existingUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Check if user has any transactions (prevent deletion if they do)
-    const hasTransactions = await db.get(
-      'SELECT id FROM transactions WHERE userId = ? LIMIT 1', 
-      [id]
-    ) as { id: string } | undefined
+    const hasTransactions = await prisma.transaction.findFirst({
+      where: { userId: id }
+    })
     
     if (hasTransactions) {
       return NextResponse.json({
@@ -166,19 +181,24 @@ export async function DELETE(
     }
 
     // Count total admin users
-    const adminCount = await db.get(
-      'SELECT COUNT(*) as count FROM users WHERE role = "ADMIN" AND isActive = 1'
-    ) as { count: number }
+    const adminCount = await prisma.user.count({
+      where: {
+        role: 'ADMIN',
+        isActive: true
+      }
+    })
 
     // Prevent deletion of the last admin user
-    if (existingUser.role === 'ADMIN' && adminCount.count <= 1) {
+    if (existingUser.role === 'ADMIN' && adminCount <= 1) {
       return NextResponse.json({
         error: 'Cannot delete the last admin user'
       }, { status: 400 })
     }
 
     // Delete user
-    await db.run('DELETE FROM users WHERE id = ?', [id])
+    await prisma.user.delete({
+      where: { id }
+    })
 
     return NextResponse.json({ message: 'User deleted successfully' })
   } catch (error) {

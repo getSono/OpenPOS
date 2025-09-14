@@ -1,23 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    const products = await db.all(`
-      SELECT p.*, c.name as categoryName 
-      FROM products p 
-      JOIN categories c ON p.categoryId = c.id 
-      WHERE p.isActive = 1 
-      ORDER BY p.name ASC
-    `)
+    const products = await prisma.product.findMany({
+      where: {
+        isActive: true
+      },
+      include: {
+        category: {
+          select: {
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    })
 
-    // Transform the data to match our interface
-    const formattedProducts = (products as Array<Record<string, unknown> & { categoryName: string }>).map(product => ({
-      ...product,
-      category: { name: product.categoryName }
-    }))
-
-    return NextResponse.json(formattedProducts)
+    return NextResponse.json(products)
   } catch (error) {
     console.error('Failed to fetch products:', error)
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
@@ -28,36 +30,29 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
     
-    const result = await db.run(`
-      INSERT INTO products (name, description, price, cost, sku, barcode, stock, minStock, categoryId, image)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      data.name,
-      data.description,
-      parseFloat(data.price),
-      data.cost ? parseFloat(data.cost) : 0,
-      data.sku,
-      data.barcode,
-      parseInt(data.stock) || 0,
-      parseInt(data.minStock) || 0,
-      data.categoryId,
-      data.image
-    ])
+    const product = await prisma.product.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        price: parseFloat(data.price),
+        cost: data.cost ? parseFloat(data.cost) : 0,
+        sku: data.sku,
+        barcode: data.barcode,
+        stock: parseInt(data.stock) || 0,
+        minStock: parseInt(data.minStock) || 0,
+        categoryId: data.categoryId,
+        image: data.image
+      },
+      include: {
+        category: {
+          select: {
+            name: true
+          }
+        }
+      }
+    })
 
-    // Get the created product with category info
-    const product = await db.get(`
-      SELECT p.*, c.name as categoryName 
-      FROM products p 
-      JOIN categories c ON p.categoryId = c.id 
-      WHERE p.id = ?
-    `, [result.lastID])
-
-    const formattedProduct = {
-      ...(product as Record<string, unknown> & { categoryName: string }),
-      category: { name: (product as { categoryName: string }).categoryName }
-    }
-
-    return NextResponse.json(formattedProduct, { status: 201 })
+    return NextResponse.json(product, { status: 201 })
   } catch (error) {
     console.error('Failed to create product:', error)
     return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })
