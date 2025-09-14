@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, TABLES } from '@/lib/supabase'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    const { data: products, error } = await supabase
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
+    const { data: products, error } = await supabase!
       .from(TABLES.PRODUCTS)
       .select(`
         *,
@@ -28,6 +31,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const data = await request.json()
     
     const productData = {
@@ -46,7 +52,7 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString()
     }
 
-    const { data: product, error } = await supabase
+    const { data: product, error } = await supabase!
       .from(TABLES.PRODUCTS)
       .insert(productData)
       .select(`

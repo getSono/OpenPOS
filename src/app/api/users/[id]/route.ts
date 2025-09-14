@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, TABLES } from '@/lib/supabase'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 
 // GET /api/users/[id] - Get single user
@@ -8,8 +8,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { id } = await params
-    const { data: user, error } = await supabase
+    const { data: user, error } = await supabase!
       .from(TABLES.USERS)
       .select('id, name, role, nfcCode, isActive, createdAt, updatedAt')
       .eq('id', id)
@@ -36,6 +39,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { id } = await params
     const { name, pin, role, nfcCode, isActive } = await request.json()
 
@@ -162,6 +168,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { id } = await params
     
     // Check if user exists

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, TABLES } from '@/lib/supabase'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    let { data: settings, error } = await supabase
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
+    let { data: settings, error } = await supabase!
       .from(TABLES.RECEIPT_SETTINGS)
       .select('*')
       .eq('isActive', true)
@@ -11,7 +14,7 @@ export async function GET() {
 
     // If no settings exist, create default ones
     if (error && error.code === 'PGRST116') {
-      const { data: newSettings, error: createError } = await supabase
+      const { data: newSettings, error: createError } = await supabase!
         .from(TABLES.RECEIPT_SETTINGS)
         .insert({
           businessName: "OpenPOS",
@@ -52,10 +55,13 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const data = await request.json()
     
     // Get current active settings
-    const { data: currentSettings } = await supabase
+    const { data: currentSettings } = await supabase!
       .from(TABLES.RECEIPT_SETTINGS)
       .select('*')
       .eq('isActive', true)
@@ -64,7 +70,7 @@ export async function PUT(request: NextRequest) {
     let settings
     if (currentSettings) {
       // Update existing settings
-      const { data: updatedSettings, error } = await supabase
+      const { data: updatedSettings, error } = await supabase!
         .from(TABLES.RECEIPT_SETTINGS)
         .update({
           businessName: data.businessName,
@@ -92,7 +98,7 @@ export async function PUT(request: NextRequest) {
       settings = updatedSettings
     } else {
       // Create new settings
-      const { data: newSettings, error } = await supabase
+      const { data: newSettings, error } = await supabase!
         .from(TABLES.RECEIPT_SETTINGS)
         .insert({
           businessName: data.businessName || "OpenPOS",

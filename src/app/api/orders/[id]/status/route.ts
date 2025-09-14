@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, TABLES } from '@/lib/supabase'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { status, workerId } = await request.json()
     const { id: orderId } = await params
 
@@ -34,7 +37,7 @@ export async function PUT(
       updateData.workerId = workerId
     }
 
-    const { data: updatedOrder, error } = await supabase
+    const { data: updatedOrder, error } = await supabase!
       .from(TABLES.TRANSACTIONS)
       .update(updateData)
       .eq('id', orderId)

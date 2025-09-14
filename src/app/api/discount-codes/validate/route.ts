@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, TABLES } from '@/lib/supabase'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { code, orderTotal } = await request.json()
 
     if (!code) {
@@ -10,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the discount code
-    const { data: discountCode, error } = await supabase
+    const { data: discountCode, error } = await supabase!
       .from(TABLES.DISCOUNT_CODES)
       .select('*')
       .eq('code', code.toUpperCase())

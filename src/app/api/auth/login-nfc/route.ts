@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, TABLES } from '@/lib/supabase'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { nfcCode } = await request.json()
 
     if (!nfcCode || typeof nfcCode !== 'string') {
@@ -10,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by NFC code
-    const { data: user, error } = await supabase
+    const { data: user, error } = await supabase!
       .from(TABLES.USERS)
       .select('id, name, role')
       .eq('nfcCode', nfcCode.trim())

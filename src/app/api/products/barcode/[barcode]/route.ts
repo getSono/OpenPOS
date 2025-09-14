@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, TABLES } from '@/lib/supabase'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ barcode: string }> }
 ) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { barcode } = await params
 
     if (!barcode) {
@@ -16,7 +19,7 @@ export async function GET(
     }
 
     // Find product by barcode
-    const { data: product, error } = await supabase
+    const { data: product, error } = await supabase!
       .from(TABLES.PRODUCTS)
       .select(`
         *,

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, TABLES } from '@/lib/supabase'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    const { data: orders, error } = await supabase
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
+    const { data: orders, error } = await supabase!
       .from(TABLES.TRANSACTIONS)
       .select(`
         *,

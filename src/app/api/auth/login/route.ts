@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, TABLES } from '@/lib/supabase'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { pin } = await request.json()
 
     if (!pin) {
@@ -11,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all active users to check PIN
-    const { data: users, error } = await supabase
+    const { data: users, error } = await supabase!
       .from(TABLES.USERS)
       .select('id, name, role, pin')
       .eq('isActive', true)

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, TABLES } from '@/lib/supabase'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { 
       items, 
       total, 
@@ -17,7 +20,7 @@ export async function POST(request: NextRequest) {
     const receiptNumber = `RCP-${Date.now()}-${Math.floor(Math.random() * 1000)}`
     
     // Get the next order number by finding the highest existing order number
-    const { data: latestTransaction } = await supabase
+    const { data: latestTransaction } = await supabase!
       .from(TABLES.TRANSACTIONS)
       .select('orderNumber')
       .order('orderNumber', { ascending: false })
@@ -36,7 +39,7 @@ export async function POST(request: NextRequest) {
     const tax = 0 // For now, we'll assume no tax
 
     // Create transaction
-    const { data: transaction, error: transactionError } = await supabase
+    const { data: transaction, error: transactionError } = await supabase!
       .from(TABLES.TRANSACTIONS)
       .insert({
         receiptNumber,
@@ -68,7 +71,7 @@ export async function POST(request: NextRequest) {
     // Insert transaction items and update stock
     for (const item of items) {
       // Insert transaction item
-      const { error: itemError } = await supabase
+      const { error: itemError } = await supabase!
         .from(TABLES.TRANSACTION_ITEMS)
         .insert({
           quantity: item.quantity,
@@ -84,21 +87,21 @@ export async function POST(request: NextRequest) {
       }
 
       // Update product stock
-      const { error: stockError } = await supabase.rpc('decrement_product_stock', {
+      const { error: stockError } = await supabase!.rpc('decrement_product_stock', {
         product_id: item.productId,
         quantity: item.quantity
       })
 
       // If RPC doesn't exist, update manually
       if (stockError) {
-        const { data: product } = await supabase
+        const { data: product } = await supabase!
           .from(TABLES.PRODUCTS)
           .select('stock')
           .eq('id', item.productId)
           .single()
 
         if (product) {
-          await supabase
+          await supabase!
             .from(TABLES.PRODUCTS)
             .update({ 
               stock: product.stock - item.quantity,
@@ -111,14 +114,14 @@ export async function POST(request: NextRequest) {
 
     // Update discount code usage if discount was applied
     if (discountCode) {
-      const { data: discountData } = await supabase
+      const { data: discountData } = await supabase!
         .from(TABLES.DISCOUNT_CODES)
         .select('currentUses')
         .eq('id', discountCode.id)
         .single()
 
       if (discountData) {
-        await supabase
+        await supabase!
           .from(TABLES.DISCOUNT_CODES)
           .update({ 
             currentUses: discountData.currentUses + 1,
@@ -129,7 +132,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the created transaction with items
-    const { data: transactionWithItems } = await supabase
+    const { data: transactionWithItems } = await supabase!
       .from(TABLES.TRANSACTIONS)
       .select(`
         *,
@@ -153,7 +156,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const { data: transactions, error } = await supabase
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
+    const { data: transactions, error } = await supabase!
       .from(TABLES.TRANSACTIONS)
       .select(`
         *,

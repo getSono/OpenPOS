@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, TABLES } from '@/lib/supabase'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 
 // GET /api/users - List all users
 export async function GET() {
   try {
-    const { data: users, error } = await supabase
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
+    const { data: users, error } = await supabase!
       .from(TABLES.USERS)
       .select('id, name, role, nfcCode, isActive, createdAt, updatedAt')
       .order('createdAt', { ascending: false })
@@ -25,6 +28,9 @@ export async function GET() {
 // POST /api/users - Create new user
 export async function POST(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { name, pin, role, nfcCode } = await request.json()
 
     // Validate required fields
