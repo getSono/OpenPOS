@@ -44,6 +44,7 @@ interface Product {
   categoryId: string
   stock: number
   minStock: number
+  image?: string
   isActive: boolean
   customFields?: Record<string, any>
 }
