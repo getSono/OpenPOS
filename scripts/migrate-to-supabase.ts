@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client'
-import sqlite3 from 'sqlite3'
-import { promisify } from 'util'
+const { PrismaClient } = require('@prisma/client');
+const sqlite3 = require('sqlite3');
+const { promisify } = require('util');
 
 // Enum type definitions (matching Prisma schema)
 enum Role {
