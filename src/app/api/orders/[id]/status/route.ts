@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { supabase, TABLES } from '@/lib/supabase'
 
 export async function PUT(
   request: NextRequest,
@@ -26,39 +26,43 @@ export async function PUT(
 
     // Update the order status
     const updateData: any = {
-      orderStatus: status
+      orderStatus: status,
+      updatedAt: new Date().toISOString()
     }
 
     if (workerId) {
       updateData.workerId = workerId
     }
 
-    const updatedOrder = await prisma.transaction.update({
-      where: { id: orderId },
-      data: updateData,
-      include: {
-        user: {
-          select: {
-            name: true
-          }
-        },
-        worker: {
-          select: {
-            name: true
-          }
-        },
-        items: {
-          include: {
-            product: {
-              select: {
-                name: true,
-                description: true
-              }
-            }
-          }
-        }
-      }
-    })
+    const { data: updatedOrder, error } = await supabase
+      .from(TABLES.TRANSACTIONS)
+      .update(updateData)
+      .eq('id', orderId)
+      .select(`
+        *,
+        user:users (
+          name
+        ),
+        worker:workers (
+          name
+        ),
+        items:transaction_items (
+          *,
+          product:products (
+            name,
+            description
+          )
+        )
+      `)
+      .single()
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json(
+        { error: 'Failed to update order status' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(updatedOrder)
   } catch (error) {

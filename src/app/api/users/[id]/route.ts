@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { supabase, TABLES } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 
 // GET /api/users/[id] - Get single user
@@ -9,21 +9,18 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        nfcCode: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    })
+    const { data: user, error } = await supabase
+      .from(TABLES.USERS)
+      .select('id, name, role, nfcCode, isActive, createdAt, updatedAt')
+      .eq('id', id)
+      .single()
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      }
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 })
     }
 
     return NextResponse.json(user)
@@ -43,12 +40,18 @@ export async function PUT(
     const { name, pin, role, nfcCode, isActive } = await request.json()
 
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-      select: { id: true, role: true }
-    })
-    if (!existingUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    const { data: existingUser, error: findError } = await supabase
+      .from(TABLES.USERS)
+      .select('id, role')
+      .eq('id', id)
+      .single()
+
+    if (findError) {
+      if (findError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      }
+      console.error('Supabase error:', findError)
+      return NextResponse.json({ error: 'Failed to find user' }, { status: 500 })
     }
 
     // Validate required fields
@@ -80,12 +83,13 @@ export async function PUT(
       }
 
       // Check if PIN already exists (exclude current user)
-      const existingPin = await prisma.user.findFirst({
-        where: {
-          pin: pin,
-          NOT: { id: id }
-        }
-      })
+      const { data: existingPin } = await supabase
+        .from(TABLES.USERS)
+        .select('id')
+        .eq('pin', pin)
+        .neq('id', id)
+        .single()
+
       if (existingPin) {
         return NextResponse.json(
           { error: 'PIN already exists' }, 
@@ -98,12 +102,13 @@ export async function PUT(
 
     // Check if NFC code already exists (if provided and exclude current user)
     if (nfcCode) {
-      const existingNFC = await prisma.user.findFirst({
-        where: {
-          nfcCode: nfcCode,
-          NOT: { id: id }
-        }
-      })
+      const { data: existingNFC } = await supabase
+        .from(TABLES.USERS)
+        .select('id')
+        .eq('nfcCode', nfcCode)
+        .neq('id', id)
+        .single()
+
       if (existingNFC) {
         return NextResponse.json(
           { error: 'NFC code already exists' }, 
@@ -115,7 +120,8 @@ export async function PUT(
     // Build update data
     const updateData: any = {
       name,
-      role: role
+      role: role,
+      updatedAt: new Date().toISOString()
     }
 
     if (hashedPin) {
@@ -131,19 +137,17 @@ export async function PUT(
     }
 
     // Update user
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        nfcCode: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    })
+    const { data: updatedUser, error: updateError } = await supabase
+      .from(TABLES.USERS)
+      .update(updateData)
+      .eq('id', id)
+      .select('id, name, role, nfcCode, isActive, createdAt, updatedAt')
+      .single()
+
+    if (updateError) {
+      console.error('Supabase error:', updateError)
+      return NextResponse.json({ error: 'Failed to update user' }, { status: 500 })
+    }
 
     return NextResponse.json(updatedUser)
   } catch (error) {
@@ -161,18 +165,27 @@ export async function DELETE(
     const { id } = await params
     
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-      select: { id: true, role: true }
-    })
-    if (!existingUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    const { data: existingUser, error: findError } = await supabase
+      .from(TABLES.USERS)
+      .select('id, role')
+      .eq('id', id)
+      .single()
+
+    if (findError) {
+      if (findError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      }
+      console.error('Supabase error:', findError)
+      return NextResponse.json({ error: 'Failed to find user' }, { status: 500 })
     }
 
     // Check if user has any transactions (prevent deletion if they do)
-    const hasTransactions = await prisma.transaction.findFirst({
-      where: { userId: id }
-    })
+    const { data: hasTransactions } = await supabase
+      .from(TABLES.TRANSACTIONS)
+      .select('id')
+      .eq('userId', id)
+      .limit(1)
+      .single()
     
     if (hasTransactions) {
       return NextResponse.json({
@@ -181,24 +194,29 @@ export async function DELETE(
     }
 
     // Count total admin users
-    const adminCount = await prisma.user.count({
-      where: {
-        role: 'ADMIN',
-        isActive: true
-      }
-    })
+    const { count: adminCount } = await supabase
+      .from(TABLES.USERS)
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'ADMIN')
+      .eq('isActive', true)
 
     // Prevent deletion of the last admin user
-    if (existingUser.role === 'ADMIN' && adminCount <= 1) {
+    if (existingUser.role === 'ADMIN' && (adminCount || 0) <= 1) {
       return NextResponse.json({
         error: 'Cannot delete the last admin user'
       }, { status: 400 })
     }
 
     // Delete user
-    await prisma.user.delete({
-      where: { id }
-    })
+    const { error: deleteError } = await supabase
+      .from(TABLES.USERS)
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) {
+      console.error('Supabase error:', deleteError)
+      return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 })
+    }
 
     return NextResponse.json({ message: 'User deleted successfully' })
   } catch (error) {
