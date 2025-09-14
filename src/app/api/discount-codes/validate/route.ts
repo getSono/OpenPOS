@@ -1,22 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
-
-interface DiscountCode {
-  id: string
-  code: string
-  name: string
-  type: 'PERCENTAGE' | 'FIXED_AMOUNT'
-  value: number
-  minAmount?: number
-  maxUses?: number
-  currentUses: number
-  isActive: boolean
-  validFrom: string
-  validUntil?: string
-}
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { code, orderTotal } = await request.json()
 
     if (!code) {
@@ -24,13 +13,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the discount code
-    const discountCode = await db.get(`
-      SELECT * FROM discount_codes 
-      WHERE code = ? AND isActive = 1
-    `, [code.toUpperCase()]) as DiscountCode | undefined
+    const { data: discountCode, error } = await supabase!
+      .from(TABLES.DISCOUNT_CODES)
+      .select('*')
+      .eq('code', code.toUpperCase())
+      .eq('isActive', true)
+      .single()
 
-    if (!discountCode) {
-      return NextResponse.json({ error: 'Invalid discount code' }, { status: 404 })
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Invalid discount code' }, { status: 404 })
+      }
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to validate discount code' }, { status: 500 })
     }
 
     // Check if discount code is still valid (date range)

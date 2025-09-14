@@ -1,50 +1,8 @@
-import sqlite3 from 'sqlite3'
-import path from 'path'
+// This file has been deprecated in favor of Supabase
+// All database operations now use src/lib/supabase.ts
+// This file exists only for backward compatibility and will be removed
 
-const dbPath = path.join(process.cwd(), 'dev.db')
+console.warn('DEPRECATED: lib/prisma.ts is deprecated. Use lib/supabase.ts instead.')
 
-class Database {
-  private db: sqlite3.Database
-
-  constructor() {
-    this.db = new sqlite3.Database(dbPath)
-  }
-
-  all(sql: string, params: unknown[] = []): Promise<unknown[]> {
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, params, (err, rows) => {
-        if (err) reject(err)
-        else resolve(rows)
-      })
-    })
-  }
-
-  get(sql: string, params: unknown[] = []): Promise<unknown> {
-    return new Promise((resolve, reject) => {
-      this.db.get(sql, params, (err, row) => {
-        if (err) reject(err)
-        else resolve(row)
-      })
-    })
-  }
-
-  run(sql: string, params: unknown[] = []): Promise<{ lastID: number; changes: number }> {
-    return new Promise((resolve, reject) => {
-      this.db.run(sql, params, function(err) {
-        if (err) reject(err)
-        else resolve({ lastID: this.lastID, changes: this.changes })
-      })
-    })
-  }
-
-  close(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.db.close((err) => {
-        if (err) reject(err)
-        else resolve()
-      })
-    })
-  }
-}
-
-export const db = new Database()
+export const prisma = null
+export default null

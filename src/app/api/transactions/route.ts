@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { 
       items, 
       total, 
@@ -15,7 +18,16 @@ export async function POST(request: NextRequest) {
 
     // Generate receipt number and order number
     const receiptNumber = `RCP-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-    const orderNumber = Math.floor(Math.random() * 900) + 100 // Random 3-digit number
+    
+    // Get the next order number by finding the highest existing order number
+    const { data: latestTransaction } = await supabase!
+      .from(TABLES.TRANSACTIONS)
+      .select('orderNumber')
+      .order('orderNumber', { ascending: false })
+      .limit(1)
+      .single()
+
+    const orderNumber = (latestTransaction?.orderNumber || 99) + 1
 
     // Calculate subtotal and discount
     const subtotal = items.reduce((sum: number, item: { unitPrice: number; quantity: number }) => 
@@ -26,64 +38,116 @@ export async function POST(request: NextRequest) {
     const discount = discountCode ? discountCode.discountAmount : 0
     const tax = 0 // For now, we'll assume no tax
 
-    // Insert transaction with enhanced fields
-    const transactionResult = await db.run(`
-      INSERT INTO transactions (
-        receiptNumber, orderNumber, subtotal, tax, discount, total, 
-        paymentMethod, orderStatus, userId, customerId, amountPaid, changeAmount, discountCodeId
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      receiptNumber, orderNumber, subtotal, tax, discount, total, 
-      paymentMethod, 'PENDING', 'user1', customerId, amountPaid, changeAmount, discountCode?.id || null
-    ])
+    // Create transaction
+    const { data: transaction, error: transactionError } = await supabase!
+      .from(TABLES.TRANSACTIONS)
+      .insert({
+        receiptNumber,
+        orderNumber,
+        subtotal,
+        tax,
+        discount,
+        total,
+        paymentMethod: paymentMethod,
+        status: 'COMPLETED',
+        orderStatus: 'PENDING',
+        userId: 'user1', // TODO: Get from authenticated user session
+        customerId: customerId || null,
+        workerId: null,
+        discountCodeId: discountCode?.id || null,
+        amountPaid,
+        changeAmount,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      })
+      .select('*')
+      .single()
 
-    const transactionId = transactionResult.lastID
+    if (transactionError) {
+      console.error('Transaction creation error:', transactionError)
+      return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
+    }
 
-    // Insert transaction items
+    // Insert transaction items and update stock
     for (const item of items) {
-      await db.run(`
-        INSERT INTO transaction_items (quantity, unitPrice, totalPrice, transactionId, productId)
-        VALUES (?, ?, ?, ?, ?)
-      `, [item.quantity, item.unitPrice, item.unitPrice * item.quantity, transactionId, item.productId])
+      // Insert transaction item
+      const { error: itemError } = await supabase!
+        .from(TABLES.TRANSACTION_ITEMS)
+        .insert({
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.unitPrice * item.quantity,
+          transactionId: transaction.id,
+          productId: item.productId
+        })
+
+      if (itemError) {
+        console.error('Transaction item creation error:', itemError)
+        continue // Continue with other items
+      }
 
       // Update product stock
-      await db.run(`
-        UPDATE products SET stock = stock - ? WHERE id = ?
-      `, [item.quantity, item.productId])
+      const { error: stockError } = await supabase!.rpc('decrement_product_stock', {
+        product_id: item.productId,
+        quantity: item.quantity
+      })
+
+      // If RPC doesn't exist, update manually
+      if (stockError) {
+        const { data: product } = await supabase!
+          .from(TABLES.PRODUCTS)
+          .select('stock')
+          .eq('id', item.productId)
+          .single()
+
+        if (product) {
+          await supabase!
+            .from(TABLES.PRODUCTS)
+            .update({ 
+              stock: product.stock - item.quantity,
+              updatedAt: new Date().toISOString()
+            })
+            .eq('id', item.productId)
+        }
+      }
     }
 
     // Update discount code usage if discount was applied
     if (discountCode) {
-      await db.run(`
-        UPDATE discount_codes SET currentUses = currentUses + 1 WHERE id = ?
-      `, [discountCode.id])
+      const { data: discountData } = await supabase!
+        .from(TABLES.DISCOUNT_CODES)
+        .select('currentUses')
+        .eq('id', discountCode.id)
+        .single()
+
+      if (discountData) {
+        await supabase!
+          .from(TABLES.DISCOUNT_CODES)
+          .update({ 
+            currentUses: discountData.currentUses + 1,
+            updatedAt: new Date().toISOString()
+          })
+          .eq('id', discountCode.id)
+      }
     }
 
     // Get the created transaction with items
-    const transaction = await db.get(`
-      SELECT * FROM transactions WHERE id = ?
-    `, [transactionId])
+    const { data: transactionWithItems } = await supabase!
+      .from(TABLES.TRANSACTIONS)
+      .select(`
+        *,
+        items:transaction_items (
+          *,
+          product:products (
+            name,
+            price
+          )
+        )
+      `)
+      .eq('id', transaction.id)
+      .single()
 
-    const transactionItems = await db.all(`
-      SELECT ti.*, p.name as productName, p.price as productPrice
-      FROM transaction_items ti
-      JOIN products p ON ti.productId = p.id
-      WHERE ti.transactionId = ?
-    `, [transactionId])
-
-    const result = {
-      ...(transaction as Record<string, unknown>),
-      items: (transactionItems as Array<Record<string, unknown> & { productName: string; productPrice: number }>).map(item => ({
-        ...item,
-        product: {
-          name: item.productName,
-          price: item.productPrice
-        }
-      }))
-    }
-
-    return NextResponse.json(result, { status: 201 })
+    return NextResponse.json(transactionWithItems, { status: 201 })
   } catch (error) {
     console.error('Failed to create transaction:', error)
     return NextResponse.json({ error: 'Failed to process transaction' }, { status: 500 })
@@ -92,36 +156,32 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const transactions = await db.all(`
-      SELECT t.*, u.name as userName 
-      FROM transactions t 
-      JOIN users u ON t.userId = u.id 
-      ORDER BY t.createdAt DESC 
-      LIMIT 50
-    `)
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
 
-    // Get transaction items for each transaction
-    const transactionsWithItems = await Promise.all(
-      (transactions as Array<Record<string, unknown> & { id: string; userName: string }>).map(async (transaction) => {
-        const items = await db.all(`
-          SELECT ti.*, p.name as productName
-          FROM transaction_items ti
-          JOIN products p ON ti.productId = p.id
-          WHERE ti.transactionId = ?
-        `, [transaction.id])
+    const { data: transactions, error } = await supabase!
+      .from(TABLES.TRANSACTIONS)
+      .select(`
+        *,
+        user:users (
+          name
+        ),
+        items:transaction_items (
+          *,
+          product:products (
+            name
+          )
+        )
+      `)
+      .order('createdAt', { ascending: false })
+      .limit(50)
 
-        return {
-          ...transaction,
-          user: { name: transaction.userName },
-          items: (items as Array<Record<string, unknown> & { productName: string }>).map(item => ({
-            ...item,
-            product: { name: item.productName }
-          }))
-        }
-      })
-    )
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
+    }
 
-    return NextResponse.json(transactionsWithItems)
+    return NextResponse.json(transactions)
   } catch (error) {
     console.error('Failed to fetch transactions:', error)
     return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })

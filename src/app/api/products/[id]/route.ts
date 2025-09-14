@@ -1,42 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
-// GET /api/products/[id] - Get a specific product with variants
+// GET /api/products/[id] - Get a specific product
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const params = await context.params
     const productId = params.id
 
-    // Get the product with category info
-    const product = await db.get(`
-      SELECT p.*, c.name as categoryName 
-      FROM products p 
-      JOIN categories c ON p.categoryId = c.id 
-      WHERE p.id = ? AND p.isActive = 1
-    `, [productId])
+    const { data: product, error } = await supabase!
+      .from(TABLES.PRODUCTS)
+      .select(`
+        *,
+        category:categoryId (
+          name
+        )
+      `)
+      .eq('id', productId)
+      .eq('isActive', true)
+      .single()
 
-    if (!product) {
+    if (error || !product) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    // Get variants for the product
-    const variants = await db.all(`
-      SELECT * FROM product_variants 
-      WHERE productId = ? AND isActive = 1
-      ORDER BY name ASC
-    `, [productId])
-
+    // Parse customFields if they exist
     const formattedProduct = {
-      ...(product as Record<string, unknown> & { categoryName: string; customFields: string }),
-      category: { name: (product as { categoryName: string }).categoryName },
-      customFields: JSON.parse((product as { customFields: string }).customFields || '{}'),
-      variants: (variants as Array<Record<string, unknown> & { attributes: string }>).map(variant => ({
-        ...variant,
-        attributes: JSON.parse(variant.attributes || '{}')
-      }))
+      ...product,
+      customFields: product.customFields ? JSON.parse(product.customFields) : {}
     }
 
     return NextResponse.json(formattedProduct)
@@ -51,46 +47,49 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const params = await context.params
     const data = await request.json()
     const productId = params.id
     
-    await db.run(`
-      UPDATE products 
-      SET name = ?, description = ?, price = ?, cost = ?, sku = ?, barcode = ?, 
-          stock = ?, minStock = ?, categoryId = ?, image = ?, customFields = ?, updatedAt = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `, [
-      data.name,
-      data.description || null,
-      parseFloat(data.price),
-      data.cost ? parseFloat(data.cost) : 0,
-      data.sku || null,
-      data.barcode || null,
-      parseInt(data.stock) || 0,
-      parseInt(data.minStock) || 0,
-      data.categoryId,
-      data.image || null,
-      JSON.stringify(data.customFields || {}),
-      productId
-    ])
-
-    // Get the updated product with category info
-    const product = await db.get(`
-      SELECT p.*, c.name as categoryName 
-      FROM products p 
-      JOIN categories c ON p.categoryId = c.id 
-      WHERE p.id = ?
-    `, [productId])
-
-    if (!product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+    const updateData = {
+      name: data.name,
+      description: data.description,
+      price: parseFloat(data.price),
+      cost: data.cost ? parseFloat(data.cost) : 0,
+      sku: data.sku,
+      barcode: data.barcode,
+      stock: parseInt(data.stock) || 0,
+      minStock: parseInt(data.minStock) || 0,
+      categoryId: data.categoryId,
+      image: data.image,
+      customFields: JSON.stringify(data.customFields || {}),
+      updatedAt: new Date().toISOString()
     }
 
+    const { data: product, error } = await supabase!
+      .from(TABLES.PRODUCTS)
+      .update(updateData)
+      .eq('id', productId)
+      .select(`
+        *,
+        category:categoryId (
+          name
+        )
+      `)
+      .single()
+
+    if (error || !product) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to update product' }, { status: 500 })
+    }
+
+    // Parse customFields before returning
     const formattedProduct = {
-      ...(product as Record<string, unknown> & { categoryName: string; customFields: string }),
-      category: { name: (product as { categoryName: string }).categoryName },
-      customFields: JSON.parse((product as { customFields: string }).customFields || '{}')
+      ...product,
+      customFields: product.customFields ? JSON.parse(product.customFields) : {}
     }
 
     return NextResponse.json(formattedProduct)
@@ -105,15 +104,25 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const params = await context.params
     const productId = params.id
     
     // Soft delete by setting isActive to false
-    await db.run(`
-      UPDATE products 
-      SET isActive = 0, updatedAt = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `, [productId])
+    const { error } = await supabase!
+      .from(TABLES.PRODUCTS)
+      .update({ 
+        isActive: false, 
+        updatedAt: new Date().toISOString() 
+      })
+      .eq('id', productId)
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

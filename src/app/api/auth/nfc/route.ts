@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { nfcCode } = await request.json()
 
     if (!nfcCode || typeof nfcCode !== 'string') {
@@ -10,25 +13,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by NFC code
-    type UserRow = { id: number; name: string; role: string } | undefined;
-    const user = await db.get(
-      `SELECT id, name, role FROM users WHERE nfcCode = ? AND isActive = 1`,
-      [nfcCode.trim()]
-    ) as UserRow;
+    const { data: user, error } = await supabase!
+      .from(TABLES.USERS)
+      .select('id, name, role, nfcCode')
+      .eq('nfcCode', nfcCode.trim())
+      .eq('isActive', true)
+      .single()
 
-    if (!user || !user.id || !user.name || !user.role) {
-      return NextResponse.json({ error: 'Invalid NFC code' }, { status: 401 });
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Invalid NFC code' }, { status: 401 })
+      }
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Authentication failed' }, { status: 500 })
     }
 
-    // Return user data (excluding sensitive information)
-    const userData = {
-      id: user.id,
-      name: user.name,
-      role: user.role,
-      nfcCode: nfcCode.trim()
-    };
-
-    return NextResponse.json(userData);
+    return NextResponse.json(user)
   } catch (error) {
     console.error('NFC authentication error:', error)
     return NextResponse.json({ error: 'Authentication failed' }, { status: 500 })

@@ -1,22 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
-import { randomUUID } from 'crypto'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    const products = await db.all(`
-      SELECT p.*, c.name as categoryName 
-      FROM products p 
-      JOIN categories c ON p.categoryId = c.id 
-      WHERE p.isActive = 1 
-      ORDER BY p.name ASC
-    `)
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
 
-    // Transform the data to match our interface and parse customFields
-    const formattedProducts = (products as Array<Record<string, unknown> & { categoryName: string; customFields: string }>).map(product => ({
+    const { data: products, error } = await supabase!
+      .from(TABLES.PRODUCTS)
+      .select(`
+        *,
+        category:categoryId (
+          name
+        )
+      `)
+      .eq('isActive', true)
+      .order('name', { ascending: true })
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
+    }
+
+    // Transform the data to parse customFields if they exist
+    const formattedProducts = products.map(product => ({
       ...product,
-      category: { name: product.categoryName },
-      customFields: JSON.parse(product.customFields || '{}')
+      customFields: product.customFields ? JSON.parse(product.customFields) : {}
     }))
 
     return NextResponse.json(formattedProducts)
@@ -28,45 +37,48 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const data = await request.json()
     
-    // Generate a unique ID for the product
-    const productId = randomUUID()
-    
-    await db.run(`
-      INSERT INTO products (id, name, description, price, cost, sku, barcode, stock, minStock, categoryId, image, customFields)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      productId,
-      data.name,
-      data.description || null,
-      parseFloat(data.price),
-      data.cost ? parseFloat(data.cost) : 0,
-      data.sku || null,
-      data.barcode || null,
-      parseInt(data.stock) || 0,
-      parseInt(data.minStock) || 0,
-      data.categoryId,
-      data.image || null,
-      JSON.stringify(data.customFields || {})
-    ])
-
-    // Get the created product with category info
-    const product = await db.get(`
-      SELECT p.*, c.name as categoryName 
-      FROM products p 
-      JOIN categories c ON p.categoryId = c.id 
-      WHERE p.id = ?
-    `, [productId])
-
-    if (!product) {
-      return NextResponse.json({ error: 'Failed to retrieve created product' }, { status: 500 })
+    const productData = {
+      name: data.name,
+      description: data.description,
+      price: parseFloat(data.price),
+      cost: data.cost ? parseFloat(data.cost) : 0,
+      sku: data.sku,
+      barcode: data.barcode,
+      stock: parseInt(data.stock) || 0,
+      minStock: parseInt(data.minStock) || 0,
+      categoryId: data.categoryId,
+      image: data.image,
+      customFields: JSON.stringify(data.customFields || {}),
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }
 
+    const { data: product, error } = await supabase!
+      .from(TABLES.PRODUCTS)
+      .insert(productData)
+      .select(`
+        *,
+        category:categoryId (
+          name
+        )
+      `)
+      .single()
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })
+    }
+
+    // Parse customFields before returning
     const formattedProduct = {
-      ...(product as Record<string, unknown> & { categoryName: string; customFields: string }),
-      category: { name: (product as { categoryName: string }).categoryName },
-      customFields: JSON.parse((product as { customFields: string }).customFields || '{}')
+      ...product,
+      customFields: product.customFields ? JSON.parse(product.customFields) : {}
     }
 
     return NextResponse.json(formattedProduct, { status: 201 })

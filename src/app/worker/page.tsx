@@ -56,10 +56,10 @@ export default function WorkerPage() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
   const statusColors = {
-    PENDING: 'bg-yellow-500',
-    IN_PROGRESS: 'bg-blue-500',
-    READY: 'bg-green-500',
-    COMPLETED: 'bg-gray-500'
+    PENDING: 'bg-yellow-600',
+    IN_PROGRESS: 'bg-blue-700',
+    READY: 'bg-green-600',
+    COMPLETED: 'bg-gray-700'
   }
 
   const statusIcons = {
@@ -170,35 +170,35 @@ export default function WorkerPage() {
 
   if (!currentWorker) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-2xl border-0 bg-white/80 backdrop-blur-lg dark:bg-gray-900/80">
-          <CardHeader className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <User className="w-8 h-8 text-white" />
+  <div className="min-h-screen bg-gradient-to-tr from-blue-700 via-indigo-500 to-purple-700 dark:from-gray-900 dark:via-indigo-900 dark:to-purple-900 flex items-center justify-center p-6">
+        <Card className="w-full max-w-md shadow-3xl border border-gray-300 dark:border-gray-800 bg-white/90 backdrop-blur-xl dark:bg-gray-900/90">
+          <CardHeader className="text-center space-y-5">
+            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl flex items-center justify-center shadow-2xl">
+              <User className="w-10 h-10 text-white" />
             </div>
-            <CardTitle className="text-2xl">Worker Station</CardTitle>
-            <p className="text-muted-foreground">Authenticate to access the worker dashboard</p>
+            <CardTitle className="text-white text-3xl font-bold">Worker Station</CardTitle>
+            <p className="text-gray-600 dark:text-gray-300 text-base">Authentifiziere dich, um das Dashboard zu nutzen</p>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-3">
-              <label className="text-sm font-medium">NFC Worker Card</label>
-              <div className="flex space-x-3">
+          <CardContent className="space-y-8">
+            <div className="space-y-4">
+              <label className="text-white text-base font-semibold">NFC Worker Card</label>
+              <div className="flex space-x-4">
                 <Input
                   value={nfcInput}
                   onChange={(e) => setNfcInput(e.target.value)}
-                  placeholder="Tap NFC card or enter worker code"
-                  className="h-12 rounded-xl bg-secondary/50"
+                  placeholder="NFC-Karte scannen oder Code eingeben"
+                  className="h-14 rounded-2xl bg-secondary/60 text-lg px-4"
                   onKeyPress={(e) => e.key === 'Enter' && authenticateWorker()}
                 />
                 <Button 
                   onClick={authenticateWorker} 
                   disabled={!nfcInput || loading}
                   size="lg"
-                  className="px-6 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                  className="px-8 rounded-2xl text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 shadow-lg"
                 >
                   {loading ? (
                     <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
                       Auth...
                     </>
                   ) : (
@@ -206,9 +206,9 @@ export default function WorkerPage() {
                   )}
                 </Button>
               </div>
-              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                <p className="text-xs text-blue-700 dark:text-blue-300">
-                  Test codes: WORKER001, WORKER002, WORKER003
+              <div className="p-4 rounded-xl bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-800 mt-2">
+                <p className="text-sm text-blue-800 dark:text-blue-200 font-semibold">
+                  Testcodes: WORKER001, WORKER002, WORKER003
                 </p>
               </div>
             </div>
@@ -219,52 +219,52 @@ export default function WorkerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-900">
+  <div className="min-h-screen bg-gradient-to-tr from-blue-700 via-indigo-500 to-purple-700 dark:from-gray-900 dark:via-indigo-900 dark:to-purple-900">
       {/* Header */}
       <div className="bg-white/90 backdrop-blur-lg shadow-sm border-b dark:bg-gray-900/90 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12">
+          <div className="flex justify-between items-center py-8">
             <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                  <ChefHat className="h-6 w-6 text-white" />
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-700 to-indigo-800 rounded-2xl flex items-center justify-center shadow-lg">
+                  <ChefHat className="h-7 w-7 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Worker Station</h1>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Kitchen Management System</p>
+                  <h1 className="text-3xl font-extrabold text-white">Worker Station</h1>
+                  <p className="text-base text-gray-700 dark:text-gray-300">Küchen-Management</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                  <User className="h-5 w-5 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl flex items-center justify-center shadow-lg">
+                  <User className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <span className="font-semibold text-gray-900 dark:text-white">{currentWorker.name}</span>
+                  <span className="font-bold text-lg text-white">{currentWorker.name}</span>
                   {currentWorker.currentStation && (
-                    <Badge variant="outline" className="ml-2">{currentWorker.currentStation}</Badge>
+                    <Badge variant="outline" className="ml-2 text-base px-2 py-1">{currentWorker.currentStation}</Badge>
                   )}
                 </div>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-500 dark:text-gray-400">
+              <div className="text-base text-gray-600 dark:text-gray-300">
                 <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span>Last updated: {lastUpdate.toLocaleTimeString()}</span>
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Letztes Update: <span className="font-semibold">{lastUpdate.toLocaleTimeString()}</span></span>
                 </div>
               </div>
               <Button
                 variant="outline"
-                size="sm"
+                size="lg"
                 onClick={fetchOrders}
                 disabled={loading}
-                className="hover:bg-accent"
+                className="hover:bg-accent font-bold text-base px-5 py-2"
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
+                <RefreshCw className={`h-5 w-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Aktualisieren
               </Button>
-              <Button variant="outline" size="sm" onClick={handleLogout} className="hover:bg-accent">
-                <LogOut className="h-4 w-4 mr-2" />
+              <Button variant="outline" size="lg" onClick={handleLogout} className="hover:bg-accent font-bold text-base px-5 py-2">
+                <LogOut className="h-5 w-5 mr-2" />
                 Logout
               </Button>
             </div>
@@ -275,9 +275,9 @@ export default function WorkerPage() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8 bg-white/50 backdrop-blur-lg dark:bg-gray-800/50">
+          <TabsList className="grid w-full grid-cols-4 mb-10 bg-white/70 backdrop-blur-xl dark:bg-gray-800/70 shadow-lg rounded-xl">
             <TabsTrigger value="pending" className="relative data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <span>Pending</span>
+              <span className="font-bold text-base">Offen</span>
               {getOrdersByStatus('PENDING').length > 0 && (
                 <Badge className="ml-2 bg-yellow-500 hover:bg-yellow-600 text-xs px-1.5 py-0.5">
                   {getOrdersByStatus('PENDING').length}
@@ -285,7 +285,7 @@ export default function WorkerPage() {
               )}
             </TabsTrigger>
             <TabsTrigger value="in-progress" className="relative data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <span>In Progress</span>
+              <span className="font-bold text-base ">In Bearbeitung</span>
               {getOrdersByStatus('IN_PROGRESS').length > 0 && (
                 <Badge className="ml-2 bg-blue-500 hover:bg-blue-600 text-xs px-1.5 py-0.5">
                   {getOrdersByStatus('IN_PROGRESS').length}
@@ -293,7 +293,7 @@ export default function WorkerPage() {
               )}
             </TabsTrigger>
             <TabsTrigger value="ready" className="relative data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <span>Ready</span>
+              <span className="font-bold text-base ">Fertig</span>
               {getOrdersByStatus('READY').length > 0 && (
                 <Badge className="ml-2 bg-green-500 hover:bg-green-600 text-xs px-1.5 py-0.5">
                   {getOrdersByStatus('READY').length}
@@ -301,7 +301,7 @@ export default function WorkerPage() {
               )}
             </TabsTrigger>
             <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              Completed
+              <span className="font-bold text-base ">Abgeschlossen</span>
             </TabsTrigger>
           </TabsList>
 
@@ -313,90 +313,88 @@ export default function WorkerPage() {
             return (
               <TabsContent key={status} value={status} className="space-y-6">
                 {statusOrders.length === 0 ? (
-                  <Card className="bg-white/80 backdrop-blur-lg shadow-xl border-0">
-                    <CardContent className="py-16 text-center">
-                      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <Package className="h-8 w-8 text-gray-400" />
+                  <Card className="bg-white/90 backdrop-blur-xl shadow-2xl border border-gray-200 dark:border-gray-800">
+                    <CardContent className="py-20 text-center">
+                      <div className="w-20 h-20 bg-gray-200 dark:bg-gray-800 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                        <Package className="h-10 w-10 text-gray-400" />
                       </div>
-                      <p className="text-gray-500 text-lg">No {status.replace('-', ' ')} orders</p>
-                      <p className="text-gray-400 text-sm mt-1">Orders will appear here when available</p>
+                      <p className=" text-xl font-bold">Keine {status.replace('-', ' ')} Bestellungen</p>
+                      <p className=" text-base mt-2">Bestellungen erscheinen hier, sobald sie verfügbar sind.</p>
                     </CardContent>
                   </Card>
                 ) : (
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {statusOrders.map((order) => (
-                      <Card key={order.id} className="bg-white/80 backdrop-blur-lg shadow-xl border-0 hover:shadow-2xl transition-all duration-200 hover:scale-[1.02]">
-                        <CardHeader className="pb-3">
+                      <Card key={order.id} className="bg-white/90 backdrop-blur-xl shadow-2xl border border-gray-200 dark:border-gray-800 hover:shadow-3xl transition-all duration-200 hover:scale-[1.03]">
+                        <CardHeader className="pb-4">
                           <div className="flex justify-between items-start">
                             <div>
-                              <CardTitle className="text-xl flex items-center space-x-2">
-                                <span>Order #{order.orderNumber}</span>
-                                <div className={`w-3 h-3 rounded-full ${statusColors[statusKey]}`}></div>
+                              <CardTitle className="text-2xl flex items-center space-x-3 font-bold text-white">
+                                <span>Bestellung #{order.orderNumber}</span>
+                                <div className={`w-4 h-4 rounded-full ${statusColors[statusKey]} border-2 border-white dark:border-gray-900 shadow-lg`}></div>
                               </CardTitle>
-                              <div className="space-y-1 mt-2">
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                              <div className="space-y-2 mt-3">
+                                <p className="text-base text-white">
                                   {formatTime(order.createdAt)} • {getTimeSince(order.createdAt)}
                                 </p>
-                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                  Cashier: {order.user.name}
+                                <p className="text-base font-semibold text-white">
+                                  Kassierer: {order.user.name}
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${statusColors[statusKey]}`}>
-                                <StatusIcon className="h-5 w-5 text-white" />
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${statusColors[statusKey]} shadow-lg`}>
+                                <StatusIcon className="h-6 w-6 text-white" />
                               </div>
-                              <Badge variant="outline" className="text-sm font-semibold">
-                                ${order.total.toFixed(2)}
+                              <Badge variant="outline" className="text-lg font-bold px-3 py-1">
+                                €{order.total.toFixed(2)}
                               </Badge>
                             </div>
                           </div>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="space-y-2">
+                        <CardContent className="space-y-5">
+                          <div className="space-y-3">
                             {order.items.map((item, index) => (
-                              <div key={index} className="flex justify-between text-sm p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                                <span className="font-medium">{item.quantity}x {item.product.name}</span>
-                                <span className="text-gray-600 dark:text-gray-400">${(item.quantity * item.unitPrice).toFixed(2)}</span>
+                              <div key={index} className="flex justify-between text-base p-3 rounded-xl bg-gray-100 dark:bg-gray-800 font-semibold">
+                                <span>{item.quantity}x {item.product.name}</span>
+                                <span className="text-white">€{(item.quantity * item.unitPrice).toFixed(2)}</span>
                               </div>
                             ))}
                           </div>
-                          
                           <Separator />
-                          
-                          <div className="flex space-x-2">
+                          <div className="flex space-x-3">
                             {statusKey === 'PENDING' && (
                               <Button
-                                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                                className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-lg font-bold py-3 rounded-xl shadow-lg"
                                 onClick={() => updateOrderStatus(order.id, 'IN_PROGRESS')}
                                 disabled={loading}
                               >
-                                Start Working
+                                Bearbeitung starten
                               </Button>
                             )}
                             {statusKey === 'IN_PROGRESS' && (
                               <Button
-                                className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-lg font-bold py-3 rounded-xl shadow-lg"
                                 onClick={() => updateOrderStatus(order.id, 'READY')}
                                 disabled={loading}
                               >
-                                Mark Ready
+                                Als fertig markieren
                               </Button>
                             )}
                             {statusKey === 'READY' && (
                               <Button
-                                className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
+                                className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-lg font-bold py-3 rounded-xl shadow-lg"
                                 onClick={() => updateOrderStatus(order.id, 'COMPLETED')}
                                 disabled={loading}
                               >
-                                Complete Order
+                                Bestellung abschließen
                               </Button>
                             )}
                             {statusKey === 'COMPLETED' && (
-                              <div className="flex-1 text-center py-3">
-                                <div className="inline-flex items-center space-x-2 text-green-600">
-                                  <CheckCircle className="h-5 w-5" />
-                                  <span className="font-medium">Completed</span>
+                              <div className="flex-1 text-center py-4">
+                                <div className="inline-flex items-center space-x-3 text-white font-bold text-lg">
+                                  <CheckCircle className="h-6 w-6" />
+                                  <span>Abgeschlossen</span>
                                 </div>
                               </div>
                             )}

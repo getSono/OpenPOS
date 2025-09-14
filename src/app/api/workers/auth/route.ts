@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,32 +11,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For demo purposes, create test workers if they don't exist
+    // Hardcoded test workers for authentication (temporary fix for Prisma issue)
     const testWorkers = [
-      { name: 'Kitchen Worker 1', nfcCode: 'WORKER001', currentStation: 'Kitchen' },
-      { name: 'Kitchen Worker 2', nfcCode: 'WORKER002', currentStation: 'Grill' },
-      { name: 'Prep Worker', nfcCode: 'WORKER003', currentStation: 'Prep' }
+      { id: 'worker_WORKER001', name: 'Kitchen Worker 1', nfcCode: 'WORKER001', currentStation: 'Kitchen', isActive: true },
+      { id: 'worker_WORKER002', name: 'Kitchen Worker 2', nfcCode: 'WORKER002', currentStation: 'Grill', isActive: true },
+      { id: 'worker_WORKER003', name: 'Prep Worker', nfcCode: 'WORKER003', currentStation: 'Prep', isActive: true }
     ]
 
-    for (const workerData of testWorkers) {
-      await db.run(`
-        INSERT OR IGNORE INTO workers (id, name, pin, nfcCode, currentStation, isActive)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `, [
-        `worker_${workerData.nfcCode}`,
-        workerData.name,
-        '0000',
-        workerData.nfcCode,
-        workerData.currentStation,
-        1
-      ])
-    }
-
-    const worker = await db.get(`
-      SELECT id, name, nfcCode, currentStation, isActive
-      FROM workers 
-      WHERE nfcCode = ? AND isActive = 1
-    `, [nfcCode])
+    const worker = testWorkers.find(w => w.nfcCode === nfcCode && w.isActive)
 
     if (!worker) {
       return NextResponse.json(
@@ -46,7 +27,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(worker)
+    // Return worker data excluding sensitive information
+    const { isActive, ...workerData } = worker
+    return NextResponse.json(workerData)
   } catch (error) {
     console.error('Worker authentication error:', error)
     return NextResponse.json(
