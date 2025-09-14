@@ -1,15 +1,8 @@
-import { PrismaClient } from '@prisma/client'
+// This file has been deprecated in favor of Supabase
+// All database operations now use src/lib/supabase.ts
+// This file exists only for backward compatibility and will be removed
 
-declare global {
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined
-}
+console.warn('DEPRECATED: lib/prisma.ts is deprecated. Use lib/supabase.ts instead.')
 
-const prisma = globalThis.prisma || new PrismaClient()
-
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.prisma = prisma
-}
-
-export { prisma }
-export default prisma
+export const prisma = null
+export default null

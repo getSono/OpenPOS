@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { code, orderTotal } = await request.json()
 
     if (!code) {
@@ -10,21 +13,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the discount code
-    const discountCode = await prisma.discountCode.findFirst({
-      where: {
-        code: code.toUpperCase(),
-        isActive: true
-      }
-    })
+    const { data: discountCode, error } = await supabase!
+      .from(TABLES.DISCOUNT_CODES)
+      .select('*')
+      .eq('code', code.toUpperCase())
+      .eq('isActive', true)
+      .single()
 
-    if (!discountCode) {
-      return NextResponse.json({ error: 'Invalid discount code' }, { status: 404 })
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Invalid discount code' }, { status: 404 })
+      }
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to validate discount code' }, { status: 500 })
     }
 
     // Check if discount code is still valid (date range)
     const now = new Date()
-    const validFrom = discountCode.validFrom
-    const validUntil = discountCode.validUntil
+    const validFrom = new Date(discountCode.validFrom)
+    const validUntil = discountCode.validUntil ? new Date(discountCode.validUntil) : null
 
     if (now < validFrom) {
       return NextResponse.json({ error: 'Discount code is not yet active' }, { status: 400 })
