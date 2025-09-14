@@ -46,7 +46,7 @@ export async function PUT(
     const { name, pin, role, nfcCode, isActive } = await request.json()
 
     // Check if user exists
-    const { data: existingUser, error: findError } = await supabase
+  const { data: existingUser, error: findError } = await supabase!
       .from(TABLES.USERS)
       .select('id, role')
       .eq('id', id)
@@ -89,7 +89,7 @@ export async function PUT(
       }
 
       // Check if PIN already exists (exclude current user)
-      const { data: existingPin } = await supabase
+  const { data: existingPin } = await supabase!
         .from(TABLES.USERS)
         .select('id')
         .eq('pin', pin)
@@ -108,7 +108,7 @@ export async function PUT(
 
     // Check if NFC code already exists (if provided and exclude current user)
     if (nfcCode) {
-      const { data: existingNFC } = await supabase
+  const { data: existingNFC } = await supabase!
         .from(TABLES.USERS)
         .select('id')
         .eq('nfcCode', nfcCode)
@@ -143,7 +143,7 @@ export async function PUT(
     }
 
     // Update user
-    const { data: updatedUser, error: updateError } = await supabase
+  const { data: updatedUser, error: updateError } = await supabase!
       .from(TABLES.USERS)
       .update(updateData)
       .eq('id', id)
@@ -174,7 +174,7 @@ export async function DELETE(
     const { id } = await params
     
     // Check if user exists
-    const { data: existingUser, error: findError } = await supabase
+  const { data: existingUser, error: findError } = await supabase!
       .from(TABLES.USERS)
       .select('id, role')
       .eq('id', id)
@@ -189,7 +189,7 @@ export async function DELETE(
     }
 
     // Check if user has any transactions (prevent deletion if they do)
-    const { data: hasTransactions } = await supabase
+  const { data: hasTransactions } = await supabase!
       .from(TABLES.TRANSACTIONS)
       .select('id')
       .eq('userId', id)
@@ -203,7 +203,7 @@ export async function DELETE(
     }
 
     // Count total admin users
-    const { count: adminCount } = await supabase
+  const { count: adminCount } = await supabase!
       .from(TABLES.USERS)
       .select('*', { count: 'exact', head: true })
       .eq('role', 'ADMIN')
@@ -217,7 +217,7 @@ export async function DELETE(
     }
 
     // Delete user
-    const { error: deleteError } = await supabase
+  const { error: deleteError } = await supabase!
       .from(TABLES.USERS)
       .delete()
       .eq('id', id)

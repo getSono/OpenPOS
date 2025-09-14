@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if PIN already exists
-    const { data: existingPin } = await supabase
+  const { data: existingPin } = await supabase!
       .from(TABLES.USERS)
       .select('id')
       .eq('pin', pin)
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     // Check if NFC code already exists (if provided)
     if (nfcCode) {
-      const { data: existingNFC } = await supabase
+  const { data: existingNFC } = await supabase!
         .from(TABLES.USERS)
         .select('id')
         .eq('nfcCode', nfcCode)
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     const hashedPin = await bcrypt.hash(pin, 10)
 
     // Create user
-    const { data: createdUser, error } = await supabase
+    const { data: createdUser, error } = await supabase!
       .from(TABLES.USERS)
       .insert({
         name,
