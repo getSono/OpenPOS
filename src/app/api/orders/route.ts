@@ -1,39 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    const orders = await prisma.transaction.findMany({
-      where: {
-        status: 'COMPLETED'
-      },
-      take: 50,
-      orderBy: {
-        createdAt: 'desc'
-      },
-      include: {
-        user: {
-          select: {
-            name: true
-          }
-        },
-        worker: {
-          select: {
-            name: true
-          }
-        },
-        items: {
-          include: {
-            product: {
-              select: {
-                name: true,
-                description: true
-              }
-            }
-          }
-        }
-      }
-    })
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
+    const { data: orders, error } = await supabase!
+      .from(TABLES.TRANSACTIONS)
+      .select(`
+        *,
+        user:users (
+          name
+        ),
+        worker:workers (
+          name
+        ),
+        items:transaction_items (
+          *,
+          product:products (
+            name,
+            description
+          )
+        )
+      `)
+      .eq('status', 'COMPLETED')
+      .order('createdAt', { ascending: false })
+      .limit(50)
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch orders' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(orders)
   } catch (error) {

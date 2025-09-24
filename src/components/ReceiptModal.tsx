@@ -1,14 +1,27 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { X, Printer, Download } from 'lucide-react'
+import jsPDF from 'jspdf'
 
 interface ReceiptItem {
   name: string
   quantity: number
   price: number
   total: number
+}
+
+interface ReceiptSettings {
+  businessName: string
+  headerText?: string
+  footerText: string
+  logoUrl?: string
+  address?: string
+  phone?: string
+  email?: string
+  website?: string
 }
 
 interface ReceiptProps {
@@ -36,6 +49,30 @@ interface ReceiptProps {
 }
 
 export default function ReceiptModal({ isOpen, onClose, receiptData }: ReceiptProps) {
+  const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>({
+    businessName: "OpenPOS",
+    footerText: "Thank you for shopping with us!"
+  })
+
+  // Fetch receipt settings on component mount
+  useEffect(() => {
+    const fetchReceiptSettings = async () => {
+      try {
+        const response = await fetch('/api/receipt-settings')
+        if (response.ok) {
+          const settings = await response.json()
+          setReceiptSettings(settings)
+        }
+      } catch (error) {
+        console.error('Error fetching receipt settings:', error)
+      }
+    }
+
+    if (isOpen) {
+      fetchReceiptSettings()
+    }
+  }, [isOpen])
+
   if (!isOpen || !receiptData) return null
 
   const handlePrint = () => {
@@ -69,43 +106,128 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }: ReceiptPr
   }
 
   const handleDownload = () => {
-    const receiptText = `
-OPENPOS RECEIPT
-===============
-Receipt #: ${receiptData.receiptNumber}
-Order #: ${receiptData.orderNumber}
-Date: ${receiptData.timestamp}
-Cashier: ${receiptData.cashier}
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: [80, 200] // Thermal receipt size (80mm width)
+    })
 
-ITEMS:
-${receiptData.items.map(item => 
-  `${item.name} x${item.quantity} @ $${item.price.toFixed(2)} = $${item.total.toFixed(2)}`
-).join('\n')}
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    let yPosition = 10
 
-===============
-Subtotal: $${receiptData.subtotal.toFixed(2)}
-Tax: $${receiptData.tax.toFixed(2)}${receiptData.discountCode ? `
-Discount (${receiptData.discountCode.name}): -$${receiptData.discount.toFixed(2)}` : ''}
-TOTAL: $${receiptData.total.toFixed(2)}
+    // Helper function to add centered text
+    const addCenteredText = (text: string, fontSize: number, isBold: boolean = false) => {
+      pdf.setFontSize(fontSize)
+      if (isBold) {
+        pdf.setFont('helvetica', 'bold')
+      } else {
+        pdf.setFont('helvetica', 'normal')
+      }
+      const textWidth = pdf.getTextWidth(text)
+      const x = (pageWidth - textWidth) / 2
+      pdf.text(text, x, yPosition)
+      yPosition += fontSize * 0.35 + 2
+    }
 
-Payment: ${receiptData.paymentMethod}
-${receiptData.paymentMethod === 'CASH' && receiptData.amountPaid ? `
-Amount Paid: $${receiptData.amountPaid.toFixed(2)}
-Change: $${(receiptData.changeAmount || 0).toFixed(2)}` : ''}
+    // Helper function to add left-aligned text
+    const addLeftText = (text: string, fontSize: number, isBold: boolean = false) => {
+      pdf.setFontSize(fontSize)
+      if (isBold) {
+        pdf.setFont('helvetica', 'bold')
+      } else {
+        pdf.setFont('helvetica', 'normal')
+      }
+      pdf.text(text, 5, yPosition)
+      yPosition += fontSize * 0.35 + 1
+    }
 
-Thank you for shopping with us!
-Your order number is: ${receiptData.orderNumber}
-    `.trim()
+    // Helper function to add two-column text
+    const addTwoColumnText = (leftText: string, rightText: string, fontSize: number = 8) => {
+      pdf.setFontSize(fontSize)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text(leftText, 5, yPosition)
+      const rightTextWidth = pdf.getTextWidth(rightText)
+      pdf.text(rightText, pageWidth - 5 - rightTextWidth, yPosition)
+      yPosition += fontSize * 0.35 + 1
+    }
 
-    const blob = new Blob([receiptText], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `receipt-${receiptData.receiptNumber}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    // Helper function to add dashed line
+    const addDashedLine = () => {
+      pdf.setLineWidth(0.1)
+      pdf.setLineDashPattern([1, 1], 0)
+      pdf.line(5, yPosition, pageWidth - 5, yPosition)
+      yPosition += 3
+    }
+
+    // Business Name/Header
+    addCenteredText(receiptSettings.businessName || 'OpenPOS', 14, true)
+    
+    if (receiptSettings.headerText) {
+      addCenteredText(receiptSettings.headerText, 8)
+    }
+
+    if (receiptSettings.address) {
+      addCenteredText(receiptSettings.address, 7)
+    }
+    if (receiptSettings.phone) {
+      addCenteredText(receiptSettings.phone, 7)
+    }
+    if (receiptSettings.email) {
+      addCenteredText(receiptSettings.email, 7)
+    }
+
+    yPosition += 3
+    addDashedLine()
+
+    // Receipt details
+    addTwoColumnText('Receipt #:', receiptData.receiptNumber, 8)
+    addTwoColumnText('Order #:', receiptData.orderNumber.toString(), 10)
+    addTwoColumnText('Date:', receiptData.timestamp, 8)
+    addTwoColumnText('Cashier:', receiptData.cashier, 8)
+
+    addDashedLine()
+
+    // Items
+    addLeftText('ITEMS:', 9, true)
+    receiptData.items.forEach(item => {
+      addLeftText(`${item.name}`, 8)
+      addTwoColumnText(`  ${item.quantity} x $${item.price.toFixed(2)}`, `$${item.total.toFixed(2)}`, 8)
+    })
+
+    addDashedLine()
+
+    // Totals
+    addTwoColumnText('Subtotal:', `$${receiptData.subtotal.toFixed(2)}`, 8)
+    addTwoColumnText('Tax:', `$${receiptData.tax.toFixed(2)}`, 8)
+    
+    if (receiptData.discountCode && receiptData.discount > 0) {
+      addTwoColumnText(`Discount (${receiptData.discountCode.name}):`, `-$${receiptData.discount.toFixed(2)}`, 8)
+    }
+    
+    addTwoColumnText('TOTAL:', `$${receiptData.total.toFixed(2)}`, 10)
+
+    yPosition += 2
+    addTwoColumnText('Payment:', receiptData.paymentMethod, 8)
+    
+    if (receiptData.paymentMethod === 'CASH' && receiptData.amountPaid) {
+      addTwoColumnText('Amount Paid:', `$${receiptData.amountPaid.toFixed(2)}`, 8)
+      addTwoColumnText('Change:', `$${(receiptData.changeAmount || 0).toFixed(2)}`, 8)
+    }
+
+    yPosition += 5
+    addDashedLine()
+    
+    // Footer
+    if (receiptSettings.footerText) {
+      addCenteredText(receiptSettings.footerText, 8)
+    }
+    
+    if (receiptSettings.website) {
+      addCenteredText(receiptSettings.website, 7)
+    }
+
+    // Save the PDF
+    pdf.save(`receipt-${receiptData.receiptNumber}.pdf`)
   }
 
   return (
@@ -122,8 +244,22 @@ Your order number is: ${receiptData.orderNumber}
         <CardContent>
           <div id="receipt-content" className="receipt bg-white p-4 border rounded-md font-mono text-sm">
             <div className="header text-center mb-4">
-              <h2 className="font-bold text-lg">OPENPOS</h2>
-              <p className="text-xs">Point of Sale System</p>
+              <h2 className="font-bold text-lg">{receiptSettings.businessName || 'OpenPOS'}</h2>
+              {receiptSettings.headerText && (
+                <p className="text-xs mt-1">{receiptSettings.headerText}</p>
+              )}
+              {!receiptSettings.headerText && (
+                <p className="text-xs">Point of Sale System</p>
+              )}
+              {receiptSettings.address && (
+                <p className="text-xs">{receiptSettings.address}</p>
+              )}
+              {receiptSettings.phone && (
+                <p className="text-xs">{receiptSettings.phone}</p>
+              )}
+              {receiptSettings.email && (
+                <p className="text-xs">{receiptSettings.email}</p>
+              )}
             </div>
             
             <div className="receipt-details space-y-1 text-xs">
@@ -203,7 +339,10 @@ Your order number is: ${receiptData.orderNumber}
             </div>
 
             <div className="footer text-center mt-4 text-xs">
-              <p>Thank you for shopping with us!</p>
+              <p>{receiptSettings.footerText || 'Thank you for shopping with us!'}</p>
+              {receiptSettings.website && (
+                <p className="mt-1">{receiptSettings.website}</p>
+              )}
             </div>
           </div>
 
@@ -214,7 +353,7 @@ Your order number is: ${receiptData.orderNumber}
             </Button>
             <Button onClick={handleDownload} variant="outline" className="flex-1">
               <Download className="w-4 h-4 mr-2" />
-              Download
+              Download PDF
             </Button>
           </div>
         </CardContent>

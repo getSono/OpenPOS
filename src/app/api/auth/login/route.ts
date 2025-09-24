@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { supabase, TABLES, checkSupabaseConfig } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {
+    const configCheck = checkSupabaseConfig()
+    if (configCheck) return configCheck
+
     const { pin } = await request.json()
 
     if (!pin) {
@@ -11,15 +14,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all active users to check PIN
-    const users = await prisma.user.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        pin: true
-      }
-    })
+    const { data: users, error } = await supabase!
+      .from(TABLES.USERS)
+      .select('id, name, role, pin')
+      .eq('isActive', true)
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Failed to authenticate' }, { status: 500 })
+    }
 
     let authenticatedUser = null
 

@@ -1,4 +1,6 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Temporary database and build files
+dev.db
+*.db
 
 # dependencies
 /node_modules
@@ -45,12 +47,8 @@ next-env.d.ts
 *tmp*.png
 -tmp-*.png
 
-# database files
-/prisma/dev.db
-/prisma/dev.db-journal
-
-# database backups
-/prisma/backups/
+# Legacy Prisma files (migrated to Supabase)
+/prisma-legacy/
 
 # migration temporary files
 /scripts/temp/

@@ -12,7 +12,7 @@ import BarcodeScanner from '@/components/BarcodeScanner'
 import HandheldScanner from '@/components/HandheldScanner'
 import ReceiptModal from '@/components/ReceiptModal'
 import CheckoutModal from '@/components/CheckoutModal'
-import SettingsPage from '@/components/SettingsPage'
+import EnhancedSettingsPage from '@/components/EnhancedSettingsPage'
 import { 
   ShoppingCart, 
   Search, 
@@ -321,7 +321,7 @@ export default function POSInterface() {
   }
 
   if (showSettings) {
-    return <SettingsPage onBack={() => setShowSettings(false)} />
+    return <EnhancedSettingsPage onBack={() => setShowSettings(false)} />
   }
 
   return (
